@@ -804,20 +804,20 @@ addBox(0.95, 0.42, 1.38, 10.12, 0.21, 1.02, M.ceramic);
 addGlassPartition(9.64, 0.32, 9.64, 1.20, 2.10, 0.03);
 
 // --- F. BEDROOM 2 / OFFICE (Middle-Right, 10.63 m²) ---
-addBox(1.80, 0.02, 2.30, 9.45, 0.01, 5.20, M.rug, aptGroup, false, true);
-// Single / Daybed along left wall
-addBed(8.88, 4.75, 1.05, 2.00, 0);
+addBox(1.80, 0.02, 2.30, 9.45, 0.01, 5.10, M.rug, aptGroup, false, true);
+// Single / Daybed along right wall (where wardrobe was, headboard at top wall, feet toward window)
+addBed(10.07, 4.22, 1.05, 2.00, 0);
+// Wardrobe flush against right wall right past the foot of the bed
+addBox(0.55, 2.25, 1.35, 10.36, 1.125, 5.98, M.kitchenUpper);
 // Desk by the bottom window (Z=7.05)
-addBox(1.50, 0.05, 0.62, 9.45, 0.74, 7.05, M.wood);
-addBox(0.06, 0.72, 0.56, 8.76, 0.36, 7.05, M.metal);
-addBox(0.06, 0.72, 0.56, 10.14, 0.36, 7.05, M.metal);
+addBox(1.45, 0.05, 0.62, 9.25, 0.74, 7.05, M.wood);
+addBox(0.06, 0.72, 0.56, 8.58, 0.36, 7.05, M.metal);
+addBox(0.06, 0.72, 0.56, 9.92, 0.36, 7.05, M.metal);
 // Desk chair
-addBox(0.46, 0.06, 0.46, 9.45, 0.46, 6.48, M.sofa);
-addBox(0.46, 0.42, 0.06, 9.45, 0.68, 6.26, M.sofa);
-addBox(0.06, 0.44, 0.06, 9.45, 0.22, 6.48, M.metal);
-// Wardrobe along right wall
-addBox(0.55, 2.25, 1.50, 10.34, 1.125, 4.35, M.kitchenUpper);
-addLamp(10.0, 0.765, 7.05, 0.8);
+addBox(0.46, 0.06, 0.46, 9.25, 0.46, 6.48, M.sofa);
+addBox(0.46, 0.42, 0.06, 9.25, 0.68, 6.26, M.sofa);
+addBox(0.06, 0.44, 0.06, 9.25, 0.22, 6.48, M.metal);
+addLamp(9.78, 0.765, 7.05, 0.8);
 
 // --- G. BEDROOM 3 (Far-Right, 14.85 m²) ---
 addBox(2.15, 0.02, 2.55, 12.10, 0.01, 3.95, M.rug, aptGroup, false, true);
@@ -1610,7 +1610,7 @@ function buildCustomApartment(parsed, fileName) {
     // Room floor finish
     const floorMat =
       (r.type === 'bathroom' || r.type === 'kitchen') ? M.floorTile :
-      (r.type === 'balcony') ? M.floorDeck : M.floorWood;
+        (r.type === 'balcony') ? M.floorDeck : M.floorWood;
     const floorY = r.type === 'balcony' ? -0.05 : -0.03;
     const floorMesh = new THREE.Mesh(new THREE.BoxGeometry(r.w, 0.06, r.d), floorMat);
     floorMesh.position.set(cx, floorY, cz);
@@ -1887,7 +1887,7 @@ function getActiveRoomsForAI() {
 
 // Store custom rooms for AI chat context
 const origBuildCustomApt = buildCustomApartment;
-buildCustomApartment = function(parsed, fileName) {
+buildCustomApartment = function (parsed, fileName) {
   origBuildCustomApt(parsed, fileName);
   lastCustomRooms = (parsed.rooms || []).map(r => {
     const x = Number(r.x) || 0;
