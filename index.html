@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3D Дизайн Квартиры — 106.8 м² | 7 стилей ремонта и мебели</title>
+  <link rel="stylesheet" href="styles.css?v=2" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+
+<body>
+  <div id="canvas-container"></div>
+
+  <!-- Top Header -->
+  <header class="top-bar glass">
+    <div class="brand">
+      <div class="brand-badge">3D</div>
+      <div>
+        <h1>Проект ремонта и мебели</h1>
+        <p class="subtitle">106.8 м² • 3 спальни • 2 санузла • 2 балкона</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button id="btn-renders" class="btn-accent" title="Открыть фотореалистичные 3D рендеры">
+        <span>✨</span> Фотореалистичные рендеры
+      </button>
+      <button id="btn-lighting" class="btn-icon" title="Переключить день / тёплый вечер">
+        <span id="lighting-icon">☀️</span> <span id="lighting-label">День</span>
+      </button>
+      <button id="btn-walls" class="btn-icon" title="Высота стен">
+        <span>🧱</span> <span id="walls-label">Срез стен</span>
+      </button>
+      <button id="btn-labels" class="btn-icon active" title="Показать/скрыть названия комнат">
+        <span>🏷️</span> Комнаты
+      </button>
+    </div>
+  </header>
+
+  <!-- Left Panel: Style Variants -->
+  <aside class="side-panel glass">
+    <div class="panel-section">
+      <h2>Стили ремонта и мебели (7)</h2>
+      <div class="variant-list" id="variant-list">
+        <button class="variant-card active" data-variant="light">
+          <div class="swatches">
+            <span style="background:#ebe4d8"></span>
+            <span style="background:#cfa87e"></span>
+            <span style="background:#f5efe6"></span>
+            <span style="background:#8b7a68"></span>
+          </div>
+          <div class="variant-info">
+            <strong>1. Светлый Japandi</strong>
+            <span>Песок, светлый дуб, букле, травертин</span>
+          </div>
+        </button>
+
+        <button class="variant-card" data-variant="walnut">
+          <div class="swatches">
+            <span style="background:#cfc8be"></span>
+            <span style="background:#6e4b34"></span>
+            <span style="background:#3a3632"></span>
+            <span style="background:#b56b4d"></span>
+          </div>
+          <div class="variant-info">
+            <strong>2. Орех и Грейдж</strong>
+            <span>Американский орех, микроцемент, бронза</span>
+          </div>
+        </button>
+
+        <button class="variant-card" data-variant="scandi">
+          <div class="swatches">
+            <span style="background:#f6f5f0"></span>
+            <span style="background:#dcc8ad"></span>
+            <span style="background:#9eb09b"></span>
+            <span style="background:#c49a7e"></span>
+          </div>
+          <div class="variant-info">
+            <strong>3. Сканди-Джапанди</strong>
+            <span>Белёный ясень, белый, шалфей, зелень</span>
+          </div>
+        </button>
+
+        <button class="variant-card" data-variant="neoclassic">
+          <div class="swatches">
+            <span style="background:#f4f3ef"></span>
+            <span style="background:#264b42"></span>
+            <span style="background:#c7a252"></span>
+            <span style="background:#d4b891"></span>
+          </div>
+          <div class="variant-info">
+            <strong>4. Неоклассика / Luxury</strong>
+            <span>Мрамор Calacatta, латунь, бархат, молдинги</span>
+          </div>
+        </button>
+
+        <button class="variant-card" data-variant="loft">
+          <div class="swatches">
+            <span style="background:#7d7a75"></span>
+            <span style="background:#9c552e"></span>
+            <span style="background:#292827"></span>
+            <span style="background:#593d2b"></span>
+          </div>
+          <div class="variant-info">
+            <strong>5. Лофт / Индустриальный</strong>
+            <span>Бетон, кирпич, коньячная кожа, чёрный металл</span>
+          </div>
+        </button>
+
+        <button class="variant-card" data-variant="mediterranean">
+          <div class="swatches">
+            <span style="background:#f8f5ee"></span>
+            <span style="background:#c98863"></span>
+            <span style="background:#5d8aa8"></span>
+            <span style="background:#d8b88c"></span>
+          </div>
+          <div class="variant-info">
+            <strong>6. Средиземноморский</strong>
+            <span>Штукатурка, терракота, ротанг, морской синий</span>
+          </div>
+        </button>
+
+        <button class="variant-card" data-variant="hightech">
+          <div class="swatches">
+            <span style="background:#f2f4f7"></span>
+            <span style="background:#323740"></span>
+            <span style="background:#3b82a8"></span>
+            <span style="background:#94a3b8"></span>
+          </div>
+          <div class="variant-info">
+            <strong>7. Хай-Тек / Футуризм</strong>
+            <span>Глянец, графит, хром, ледяная LED-подсветка</span>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <div class="panel-section spec-box" id="variant-spec">
+      <!-- Dynamically populated -->
+    </div>
+  </aside>
+
+  <!-- Bottom Camera Bar -->
+  <nav class="camera-bar glass" id="camera-bar">
+    <button class="cam-btn active" data-cam="iso">🏠 Общий 3D</button>
+    <button class="cam-btn" data-cam="top">📐 План сверху</button>
+    <button class="cam-btn" data-cam="living">🛋️ Гостиная и кухня</button>
+    <button class="cam-btn" data-cam="master">🛏️ Мастер-спальня</button>
+    <button class="cam-btn" data-cam="bed2">💻 Спальня 2</button>
+    <button class="cam-btn" data-cam="bed3">🌙 Спальня 3</button>
+    <button class="cam-btn" data-cam="balcony">🌿 Балкон</button>
+  </nav>
+
+  <!-- Room Labels Overlay -->
+  <div id="labels-layer"></div>
+
+  <!-- Help Hint -->
+  <div class="hint-pill glass">
+    ЛКМ — вращать • ПКМ — перемещать • Колёсико — масштаб
+  </div>
+
+  <!-- Photorealistic Renders Gallery Modal -->
+  <div id="renders-modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content glass">
+      <div class="modal-header">
+        <div>
+          <h2>Фотореалистичные 3D-рендеры</h2>
+          <p class="subtitle">Визуализация вариантов ремонта и мебели по вашей планировке</p>
+        </div>
+        <button id="modal-close" class="btn-icon">✕ Закрыть</button>
+      </div>
+      <div class="gallery-grid" id="gallery-grid">
+        <figure class="render-card" data-variant="light">
+          <img src="renders/variant1_light_japandi.jpg" alt="Вариант 1 — Светлый Japandi" loading="lazy" />
+          <figcaption>
+            <div class="cap-row">
+              <div>
+                <strong>Вариант 1: Светлый Japandi (Песок и Дуб)</strong>
+                <span>Светлый дуб, кремовая штукатурка, травертин, диван букле</span>
+              </div>
+              <button class="btn-apply" data-apply="light">В 3D</button>
+            </div>
+          </figcaption>
+        </figure>
+        <figure class="render-card" data-variant="walnut">
+          <img src="renders/variant2_walnut_greige.jpg" alt="Вариант 2 — Орех и Грейдж" loading="lazy" />
+          <figcaption>
+            <div class="cap-row">
+              <div>
+                <strong>Вариант 2: Тёплый минимализм (Орех и Грейдж)</strong>
+                <span>Американский орех, тёплый грейдж, вечерний скрытый свет</span>
+              </div>
+              <button class="btn-apply" data-apply="walnut">В 3D</button>
+            </div>
+          </figcaption>
+        </figure>
+        <figure class="render-card" data-variant="scandi">
+          <img src="renders/variant3_scandi_japandi.jpg" alt="Вариант 3 — Сканди-Джапанди" loading="lazy" />
+          <figcaption>
+            <div class="cap-row">
+              <div>
+                <strong>Вариант 3: Сканди-Джапанди (Ясень и Шалфей)</strong>
+                <span>Светлый ясень, белые стены, шалфейные акценты и растения</span>
+              </div>
+              <button class="btn-apply" data-apply="scandi">В 3D</button>
+            </div>
+          </figcaption>
+        </figure>
+        <figure class="render-card">
+          <img src="renders/living_kitchen_interior.jpg" alt="Интерьер гостиной и кухни 31.17 м²" loading="lazy" />
+          <figcaption>
+            <strong>Ракурс изнутри: Гостиная + Кухня (31.17 м²)</strong>
+            <span>Вид от прихожей на ТВ-зону, обеденный стол, кухню и большой балкон</span>
+          </figcaption>
+        </figure>
+        <figure class="render-card" data-variant="neoclassic">
+          <img src="renders/variant4_neoclassic.jpg" alt="Вариант 4 — Неоклассика Luxury" loading="lazy" />
+          <figcaption>
+            <div class="cap-row">
+              <div>
+                <strong>Вариант 4: Современная Неоклассика / Luxury</strong>
+                <span>Мрамор Calacatta, матовая латунь, изумрудный бархат, молдинги</span>
+              </div>
+              <button class="btn-apply" data-apply="neoclassic">В 3D</button>
+            </div>
+          </figcaption>
+        </figure>
+        <figure class="render-card" data-variant="loft">
+          <img src="renders/variant5_loft.jpg" alt="Вариант 5 — Лофт Индустриальный" loading="lazy" />
+          <figcaption>
+            <div class="cap-row">
+              <div>
+                <strong>Вариант 5: Лофт / Индустриальный тёмный</strong>
+                <span>Бетон, кирпич, копчёный дуб, коньячная кожа, чёрный металл</span>
+              </div>
+              <button class="btn-apply" data-apply="loft">В 3D</button>
+            </div>
+          </figcaption>
+        </figure>
+        <figure class="render-card" data-variant="mediterranean">
+          <img src="renders/variant6_mediterranean.jpg" alt="Вариант 6 — Средиземноморский" loading="lazy" />
+          <figcaption>
+            <div class="cap-row">
+              <div>
+                <strong>Вариант 6: Средиземноморский / Курортный модерн</strong>
+                <span>Белая штукатурка, известняк, терракота, ротанг и оливковые деревья</span>
+              </div>
+              <button class="btn-apply" data-apply="mediterranean">В 3D</button>
+            </div>
+          </figcaption>
+        </figure>
+        <figure class="render-card" data-variant="hightech">
+          <img src="renders/variant7_hightech.jpg" alt="Вариант 7 — Хай-Тек Футуризм" loading="lazy" />
+          <figcaption>
+            <div class="cap-row">
+              <div>
+                <strong>Вариант 7: Хай-Тек / Футуризм</strong>
+                <span>Глянцевый белый и графит, хром, стекло, ледяная LED-подсветка</span>
+              </div>
+              <button class="btn-apply" data-apply="hightech">В 3D</button>
+            </div>
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lightbox for full-size render -->
+  <div id="lightbox" class="lightbox hidden">
+    <img id="lightbox-img" src="" alt="Full view" />
+    <button id="lightbox-close" class="btn-icon">✕</button>
+  </div>
+
+  <script type="module" src="app.js?v=3"></script>
+</body>
+
+</html>
