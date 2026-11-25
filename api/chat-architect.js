@@ -20,11 +20,15 @@ AVAILABLE ACTIONS you can include in the "actions" array (can return 0, 1, or mu
 5. { "type": "set_labels", "visible": true|false }
 6. { "type": "set_camera", "preset": "iso"|"top"|"living"|"master"|"bed2"|"bed3"|"balcony" }
 7. { "type": "add_item", "itemType": "plant"|"armchair"|"sofa"|"desk"|"bed"|"lamp"|"coffee_table"|"wardrobe"|"dining_table"|"rug", "room": string, "x": number, "z": number, "color": "#RRGGBB" (optional) }
-   - Place (x, z) INSIDE the requested room's bounds (near room cx, cz with slight offset so it doesn't sit outside the room).
-8. { "type": "remove_item", "target": "last"|"all_added"|"plant"|"armchair"|"sofa"|"desk"|"bed"|"lamp"|"coffee_table"|"wardrobe"|"dining_table"|"rug"|"tv_wall" }
-   - Removes both AI-added items AND existing scene objects of that category (e.g. target="plant" removes ALL plants/flowers in the apartment!).
-9. { "type": "show_item", "target": "plant"|"bed"|"lamp"|"sofa"|"tv_wall"|"rug" }
-10. { "type": "restore_default_furniture" }
+   - Place (x, z) INSIDE the requested room's bounds. For "plant" or "lamp", place near a CORNER of the room (e.g. x + 0.45, z + 0.45) — NEVER on top of the center (cx, cz) where beds/sofas sit!
+8. { "type": "remove_item", "target": "last"|"all_added"|"plant"|"lamp"|"armchair"|"sofa"|"desk"|"bed"|"coffee_table"|"wardrobe"|"dining_table"|"kitchen"|"rug"|"tv_wall", "room": string (optional) }
+   - IMPORTANT: If the user specifies a room (e.g. "с балкона 1" -> "Большой балкон", "с балконов" -> "балконы", "в гостиной" -> "Гостиная + Кухня"), ALWAYS include "room" so ONLY items in that room are removed!
+   - If the user asks to restore previously hidden items in a room, use "show_item" instead of "add_item"!
+9. { "type": "show_item", "target": "plant"|"lamp"|"armchair"|"sofa"|"desk"|"bed"|"coffee_table"|"wardrobe"|"dining_table"|"kitchen"|"rug"|"tv_wall", "room": string (optional) }
+10. { "type": "move_item", "target": "sofa"|"tv_wall"|"dining_table"|"coffee_table"|"desk"|"bed"|"wardrobe", "dx": number, "dz": number }
+11. { "type": "restore_default_furniture" }
+
+CRITICAL: NEVER say you changed/removed/added something in "reply" unless you ALSO include the matching action in "actions"!
 
 RULES:
 - Always reply concisely in Russian in the "reply" field explaining what you changed (or answering their design question).

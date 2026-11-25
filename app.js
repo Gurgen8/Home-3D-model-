@@ -718,45 +718,54 @@ sofaG.position.set(5.35, 0, 3.75);
 aptGroup.add(sofaG);
 
 // Round Travertine Coffee Table
+const coffeeTableG = new THREE.Group();
+coffeeTableG.userData.category = 'coffee_table';
 const coffeeTop = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.06, 28), M.countertop);
 coffeeTop.position.set(4.25, 0.36, 3.60);
 coffeeTop.castShadow = true;
-aptGroup.add(coffeeTop);
+coffeeTableG.add(coffeeTop);
 const coffeeBase = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.33, 20), M.wood);
 coffeeBase.position.set(4.25, 0.17, 3.60);
-aptGroup.add(coffeeBase);
+coffeeTableG.add(coffeeBase);
+aptGroup.add(coffeeTableG);
 
 // Dining Table + 6 Chairs (near Big Balcony glass doors)
-addBox(1.85, 0.06, 0.92, 4.65, 0.75, 5.75, M.wood);
-addBox(0.08, 0.74, 0.72, 3.92, 0.37, 5.75, M.woodDark);
-addBox(0.08, 0.74, 0.72, 5.38, 0.37, 5.75, M.woodDark);
+const diningG = new THREE.Group();
+diningG.userData.category = 'dining_table';
+addBox(1.85, 0.06, 0.92, 4.65, 0.75, 5.75, M.wood, diningG);
+addBox(0.08, 0.74, 0.72, 3.92, 0.37, 5.75, M.woodDark, diningG);
+addBox(0.08, 0.74, 0.72, 5.38, 0.37, 5.75, M.woodDark, diningG);
 [-0.56, 0, 0.56].forEach(dx => {
   // Top side chairs
-  addBox(0.42, 0.05, 0.42, 4.65 + dx, 0.45, 5.12, M.sofa);
-  addBox(0.42, 0.40, 0.06, 4.65 + dx, 0.65, 4.92, M.wood);
-  addBox(0.38, 0.44, 0.38, 4.65 + dx, 0.22, 5.12, M.metal);
+  addBox(0.42, 0.05, 0.42, 4.65 + dx, 0.45, 5.12, M.sofa, diningG);
+  addBox(0.42, 0.40, 0.06, 4.65 + dx, 0.65, 4.92, M.wood, diningG);
+  addBox(0.38, 0.44, 0.38, 4.65 + dx, 0.22, 5.12, M.metal, diningG);
   // Bottom side chairs
-  addBox(0.42, 0.05, 0.42, 4.65 + dx, 0.45, 6.28, M.sofa);
-  addBox(0.42, 0.40, 0.06, 4.65 + dx, 0.65, 6.46, M.wood);
-  addBox(0.38, 0.44, 0.38, 4.65 + dx, 0.22, 6.28, M.metal);
+  addBox(0.42, 0.05, 0.42, 4.65 + dx, 0.45, 6.28, M.sofa, diningG);
+  addBox(0.42, 0.40, 0.06, 4.65 + dx, 0.65, 6.46, M.wood, diningG);
+  addBox(0.38, 0.44, 0.38, 4.65 + dx, 0.22, 6.28, M.metal, diningG);
 });
+aptGroup.add(diningG);
 addPlant(3.38, 6.18, 1.15);
 
 // --- B. KITCHEN (Right side of Living, X=6.6–8.1, Z=3.45–6.5) ---
+const kitchenG = new THREE.Group();
+kitchenG.userData.category = 'kitchen';
 // Lower run along X=7.80
-addBox(0.62, 0.86, 2.95, 7.82, 0.43, 5.05, M.kitchenLower);
+addBox(0.62, 0.86, 2.95, 7.82, 0.43, 5.05, M.kitchenLower, kitchenG);
 // Stone countertop
-addBox(0.66, 0.05, 2.98, 7.80, 0.885, 5.05, M.countertop);
+addBox(0.66, 0.05, 2.98, 7.80, 0.885, 5.05, M.countertop, kitchenG);
 // Tall fridge / oven column at top of kitchen
-addBox(0.64, 2.25, 0.68, 7.81, 1.125, 3.85, M.kitchenUpper);
+addBox(0.64, 2.25, 0.68, 7.81, 1.125, 3.85, M.kitchenUpper, kitchenG);
 // Upper cabinets
-addBox(0.38, 0.82, 2.25, 7.93, 1.85, 5.35, M.kitchenUpper);
+addBox(0.38, 0.82, 2.25, 7.93, 1.85, 5.35, M.kitchenUpper, kitchenG);
 // Return lower peninsula at bottom (Z=6.28)
-addBox(0.95, 0.86, 0.60, 7.05, 0.43, 6.24, M.kitchenLower);
-addBox(0.98, 0.05, 0.64, 7.05, 0.885, 6.24, M.countertop);
+addBox(0.95, 0.86, 0.60, 7.05, 0.43, 6.24, M.kitchenLower, kitchenG);
+addBox(0.98, 0.05, 0.64, 7.05, 0.885, 6.24, M.countertop, kitchenG);
 // Sink & Cooktop
-addBox(0.42, 0.02, 0.56, 7.78, 0.915, 4.75, M.metal);
-addBox(0.46, 0.02, 0.62, 7.78, 0.915, 5.75, M.tvScreen);
+addBox(0.42, 0.02, 0.56, 7.78, 0.915, 4.75, M.metal, kitchenG);
+addBox(0.46, 0.02, 0.62, 7.78, 0.915, 5.75, M.tvScreen, kitchenG);
+aptGroup.add(kitchenG);
 
 // --- C. MASTER BEDROOM (Left, 22.72 m²) ---
 // Rug
@@ -768,13 +777,17 @@ addBox(0.44, 0.46, 0.46, 0.54, 0.23, 3.60, M.wood);
 addLamp(0.54, 0.46, 3.60, 0.95);
 addBox(0.44, 0.46, 0.46, 0.54, 0.23, 6.10, M.wood);
 addLamp(0.54, 0.46, 6.10, 0.95);
-// Built-in Wardrobe along top-left wall (below Bath 1)
-addBox(0.60, 2.35, 1.45, 0.62, 1.175, 2.88, M.kitchenUpper);
-// Bottom alcove: Walk-in Wardrobe + Cozy Reading Chair + Plant
-addBox(0.60, 2.35, 2.15, 0.62, 1.175, 7.95, M.kitchenUpper);
+// Built-in Wardrobes
+const masterWardrobe1 = addBox(0.60, 2.35, 1.45, 0.62, 1.175, 2.88, M.kitchenUpper);
+masterWardrobe1.userData.category = 'wardrobe';
+const masterWardrobe2 = addBox(0.60, 2.35, 2.15, 0.62, 1.175, 7.95, M.kitchenUpper);
+masterWardrobe2.userData.category = 'wardrobe';
 // Reading armchair
-addBox(0.75, 0.38, 0.75, 2.05, 0.22, 8.35, M.sofa);
-addBox(0.75, 0.68, 0.18, 2.05, 0.48, 8.65, M.sofa);
+const masterChairG = new THREE.Group();
+masterChairG.userData.category = 'armchair';
+addBox(0.75, 0.38, 0.75, 2.05, 0.22, 8.35, M.sofa, masterChairG);
+addBox(0.75, 0.68, 0.18, 2.05, 0.48, 8.65, M.sofa, masterChairG);
+aptGroup.add(masterChairG);
 addPlant(2.55, 8.75, 1.0);
 
 // --- D. BATHROOM 1 (Top-Left, 4.52 m²) ---
@@ -808,15 +821,19 @@ addBox(1.80, 0.02, 2.30, 9.45, 0.01, 5.10, M.rug, aptGroup, false, true);
 // Single / Daybed along right wall (where wardrobe was, headboard at top wall, feet toward window)
 addBed(10.07, 4.22, 1.05, 2.00, 0);
 // Wardrobe flush against right wall right past the foot of the bed
-addBox(0.55, 2.25, 1.35, 10.36, 1.125, 5.98, M.kitchenUpper);
+const bed2Wardrobe = addBox(0.55, 2.25, 1.35, 10.36, 1.125, 5.98, M.kitchenUpper);
+bed2Wardrobe.userData.category = 'wardrobe';
 // Desk by the bottom window (Z=7.05)
-addBox(1.45, 0.05, 0.62, 9.25, 0.74, 7.05, M.wood);
-addBox(0.06, 0.72, 0.56, 8.58, 0.36, 7.05, M.metal);
-addBox(0.06, 0.72, 0.56, 9.92, 0.36, 7.05, M.metal);
+const bed2DeskG = new THREE.Group();
+bed2DeskG.userData.category = 'desk';
+addBox(1.45, 0.05, 0.62, 9.25, 0.74, 7.05, M.wood, bed2DeskG);
+addBox(0.06, 0.72, 0.56, 8.58, 0.36, 7.05, M.metal, bed2DeskG);
+addBox(0.06, 0.72, 0.56, 9.92, 0.36, 7.05, M.metal, bed2DeskG);
 // Desk chair
-addBox(0.46, 0.06, 0.46, 9.25, 0.46, 6.48, M.sofa);
-addBox(0.46, 0.42, 0.06, 9.25, 0.68, 6.26, M.sofa);
-addBox(0.06, 0.44, 0.06, 9.25, 0.22, 6.48, M.metal);
+addBox(0.46, 0.06, 0.46, 9.25, 0.46, 6.48, M.sofa, bed2DeskG);
+addBox(0.46, 0.42, 0.06, 9.25, 0.68, 6.26, M.sofa, bed2DeskG);
+addBox(0.06, 0.44, 0.06, 9.25, 0.22, 6.48, M.metal, bed2DeskG);
+aptGroup.add(bed2DeskG);
 addLamp(9.78, 0.765, 7.05, 0.8);
 
 // --- G. BEDROOM 3 (Far-Right, 14.85 m²) ---
@@ -829,7 +846,8 @@ addLamp(13.15, 0.46, 2.95, 0.9);
 addBox(0.44, 0.46, 0.44, 13.15, 0.23, 5.15, M.wood);
 addLamp(13.15, 0.46, 5.15, 0.9);
 // Built-in Wardrobe along top wall (Z=1.05)
-addBox(2.25, 2.35, 0.60, 12.10, 1.175, 1.02, M.kitchenUpper);
+const bed3Wardrobe = addBox(2.25, 2.35, 0.60, 12.10, 1.175, 1.02, M.kitchenUpper);
+bed3Wardrobe.userData.category = 'wardrobe';
 addPlant(11.15, 5.65, 1.0);
 
 // --- H. BIG BALCONY (10.03 m²) ---
@@ -1996,22 +2014,98 @@ function spawnChatItem(action) {
   aiAddedItems.push({ id, itemType, room: action.room || '', x, z, mesh: g });
 }
 
-function setCategoryVisibilityInScene(category, visible) {
+function normalizeCategory(raw) {
+  const s = String(raw || '').toLowerCase().trim();
+  if (/plant|flower|tree|цвет|растен/.test(s)) return 'plant';
+  if (/lamp|light|sconce|chandelier|светиль|ламп|люстр|торшер/.test(s)) return 'lamp';
+  if (/sofa|couch|диван/.test(s)) return 'sofa';
+  if (/armchair|chair|кресл/.test(s)) return 'armchair';
+  if (/bed|кроват/.test(s)) return 'bed';
+  if (/tv|телев/.test(s)) return 'tv_wall';
+  if (/dining|обеден/.test(s)) return 'dining_table';
+  if (/coffee|журналь/.test(s)) return 'coffee_table';
+  if (/desk|рабоч|письмен/.test(s)) return 'desk';
+  if (/wardrobe|closet|cabinet|шкаф/.test(s)) return 'wardrobe';
+  if (/kitchen|кухн/.test(s)) return 'kitchen';
+  if (/rug|carpet|ков[её]р/.test(s)) return 'rug';
+  return s.replace(/s$/, '');
+}
+
+function findMatchingRooms(roomQuery) {
+  if (!roomQuery) return null;
+  const q = String(roomQuery).toLowerCase().trim();
+  if (!q || q === 'all' || q === 'все' || q === 'весь дом') return null;
+  const rooms = getActiveRoomsForAI();
+  // Match "balcony" / "балконы" -> all balconies
+  if (q === 'balcony' || q === 'balconies' || q === 'балконы' || q === 'балкон' || q === 'all_balconies') {
+    const b = rooms.filter(r => r.type === 'balcony');
+    if (b.length) return b;
+  }
+  if (/балкон\s*1|большой\s*балкон|balcony\s*1/.test(q)) {
+    const b = rooms.filter(r => r.type === 'balcony');
+    return b.length ? [b[0]] : null;
+  }
+  if (/балкон\s*2|малый\s*балкон|balcony\s*2/.test(q)) {
+    const b = rooms.filter(r => r.type === 'balcony');
+    return b.length > 1 ? [b[1]] : b;
+  }
+  const matched = rooms.filter(r =>
+    r.name.toLowerCase().includes(q) ||
+    q.includes(r.name.toLowerCase()) ||
+    (r.type && q.includes(r.type.toLowerCase()))
+  );
+  return matched.length ? matched : null;
+}
+
+function isObjInsideRooms(obj, rooms) {
+  if (!rooms) return true;
+  const box = new THREE.Box3().setFromObject(obj);
+  const center = new THREE.Vector3();
+  box.getCenter(center);
+  const pad = 0.25;
+  return rooms.some(r =>
+    center.x >= r.x - pad && center.x <= r.x + r.w + pad &&
+    center.z >= r.z - pad && center.z <= r.z + r.d + pad
+  );
+}
+
+function setCategoryVisibilityInScene(rawCat, visible, roomFilter = null) {
+  const category = normalizeCategory(rawCat);
+  const targetRooms = findMatchingRooms(roomFilter);
   const groups = [aptGroup, customAptGroup].filter(Boolean);
+  let count = 0;
+  for (const root of groups) {
+    root.traverse(obj => {
+      const isMatch =
+        obj.userData?.category === category ||
+        (category === 'rug' && obj.material === M.rug) ||
+        (category === 'lamp' && obj.material === M.lampGlow);
+      if (isMatch && isObjInsideRooms(obj, targetRooms)) {
+        obj.visible = visible;
+        count++;
+      }
+    });
+  }
+  if (category === 'lamp' && !targetRooms) {
+    interiorLights.forEach(l => (l.visible = visible));
+  }
+  return count;
+}
+
+function moveCategoryInScene(rawCat, dx = 0, dz = 0) {
+  const category = normalizeCategory(rawCat);
+  const groups = [aptGroup, customAptGroup, aiObjectsGroup].filter(Boolean);
   for (const root of groups) {
     root.traverse(obj => {
       if (obj.userData?.category === category) {
-        obj.visible = visible;
-      } else if (category === 'rug' && obj.material === M.rug) {
-        obj.visible = visible;
-      } else if (category === 'tv_wall' && obj.material === M.tvScreen) {
-        obj.visible = visible;
+        obj.position.x += Number(dx) || 0;
+        obj.position.z += Number(dz) || 0;
       }
     });
   }
 }
 
-function removeChatItem(target) {
+function removeChatItem(target, roomFilter = null) {
   if (target === 'last') {
     const last = aiAddedItems.pop();
     if (last) aiObjectsGroup.remove(last.mesh);
@@ -2023,67 +2117,87 @@ function removeChatItem(target) {
     return;
   }
 
-  // Normalize aliases (e.g. "plants" -> "plant", "flowers" -> "plant", "beds" -> "bed")
-  const norm = String(target || '').toLowerCase().replace(/s$/, '');
-  const cat = norm === 'flower' ? 'plant' : norm;
+  const cat = normalizeCategory(target);
+  const targetRooms = findMatchingRooms(roomFilter);
 
-  // 1. Remove ALL matching AI-added items
+  // 1. Remove matching AI-added items (respecting roomFilter if provided)
   aiAddedItems = aiAddedItems.filter(it => {
-    if (it.itemType === cat || it.id === target) {
+    const typeMatch = normalizeCategory(it.itemType) === cat || it.id === target;
+    if (typeMatch && isObjInsideRooms(it.mesh, targetRooms)) {
       aiObjectsGroup.remove(it.mesh);
       return false;
     }
     return true;
   });
 
-  // 2. Also hide ALL matching existing items in the 3D apartment!
-  setCategoryVisibilityInScene(cat, false);
+  // 2. Also hide matching existing items in the 3D apartment (ONLY in targetRooms if specified!)
+  setCategoryVisibilityInScene(cat, false, roomFilter);
 }
 
 function executeChatActions(actions) {
-  if (!Array.isArray(actions)) return;
+  if (!Array.isArray(actions)) return [];
+  const applied = [];
   for (const a of actions) {
     if (!a || !a.type) continue;
     switch (a.type) {
       case 'set_style':
-        if (VARIANTS[a.variant]) applyVariant(a.variant);
+        if (VARIANTS[a.variant]) {
+          applyVariant(a.variant);
+          applied.push(`Стиль: ${VARIANTS[a.variant].name}`);
+        }
         break;
       case 'set_color':
         if (M[a.target] && a.hex) {
           M[a.target].color.set(a.hex);
           M[a.target].needsUpdate = true;
+          applied.push(`Цвет ${a.target} → ${a.hex}`);
         }
         break;
       case 'set_lighting':
         isNight = a.mode === 'night';
         applyLighting();
+        applied.push(isNight ? 'Вечерний свет' : 'Дневной свет');
         break;
       case 'set_walls':
         isCutaway = Boolean(a.cutaway);
         applyWallHeight();
+        applied.push(isCutaway ? 'Срез стен' : 'Полные стены');
         break;
       case 'set_labels':
         showLabels = Boolean(a.visible);
         document.getElementById('btn-labels').classList.toggle('active', showLabels);
+        applied.push(showLabels ? 'Подписи вкл' : 'Подписи выкл');
         break;
       case 'set_camera':
-        if (CAM_PRESETS[a.preset]) flyTo(a.preset);
+        if (CAM_PRESETS[a.preset]) {
+          flyTo(a.preset);
+          applied.push(`Камера: ${a.preset}`);
+        }
         break;
       case 'add_item':
         spawnChatItem(a);
+        applied.push(`+ ${a.itemType}`);
         break;
       case 'remove_item':
-        removeChatItem(a.target);
+        removeChatItem(a.target, a.room || null);
+        applied.push(a.room ? `− ${a.target} (${a.room})` : `− ${a.target}`);
         break;
       case 'show_item':
-        setCategoryVisibilityInScene(String(a.target || '').toLowerCase().replace(/s$/, ''), true);
+        setCategoryVisibilityInScene(a.target, true, a.room || null);
+        applied.push(a.room ? `Показано: ${a.target} (${a.room})` : `Показано: ${a.target}`);
+        break;
+      case 'move_item':
+        moveCategoryInScene(a.target, a.dx, a.dz);
+        applied.push(`Сдвинуто: ${a.target}`);
         break;
       case 'restore_default_furniture':
-        ['plant', 'bed', 'lamp', 'sofa', 'tv_wall', 'rug'].forEach(c => setCategoryVisibilityInScene(c, true));
+        ['plant', 'bed', 'lamp', 'sofa', 'armchair', 'tv_wall', 'rug', 'dining_table', 'coffee_table', 'desk', 'wardrobe', 'kitchen'].forEach(c => setCategoryVisibilityInScene(c, true));
         applyVariant(currentVariantKey);
+        applied.push('Вся мебель восстановлена');
         break;
     }
   }
+  return applied;
 }
 
 // Chat UI Events
@@ -2139,8 +2253,14 @@ async function sendChatMessage(text) {
 
     if (!res.ok) throw new Error(data.message || data.error || 'Ошибка чата');
 
-    executeChatActions(data.actions);
-    appendChatBubble('assistant', data.reply || 'Готово!');
+    const applied = executeChatActions(data.actions);
+    const bubble = appendChatBubble('assistant', data.reply || 'Готово!');
+    if (applied.length > 0) {
+      const tags = document.createElement('div');
+      tags.className = 'chat-action-tags';
+      tags.innerHTML = applied.map(t => `<span>✓ ${t}</span>`).join('');
+      bubble.appendChild(tags);
+    }
     chatHistory.push({ role: 'user', text: msg }, { role: 'assistant', text: data.reply || 'Готово!' });
   } catch (err) {
     loader.remove();
