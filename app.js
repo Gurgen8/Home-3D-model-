@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { loadImageFile, parseFloorPlanCV } from './floorplanParser.js';
 
 // ============================================================
 // 1. DESIGN VARIANTS (3 Warm Minimalism / Japandi Options)
@@ -858,13 +859,19 @@ const ROOMS = [
 
 const labelsLayer = document.getElementById('labels-layer');
 let showLabels = true;
-const labelEls = ROOMS.map(r => {
-  const el = document.createElement('div');
-  el.className = 'room-label';
-  el.innerHTML = `${r.name}<small>${r.area}</small>`;
-  labelsLayer.appendChild(el);
-  return { el, pos: r.pos };
-});
+let labelEls = [];
+
+function setRoomLabels(roomList) {
+  labelsLayer.innerHTML = '';
+  labelEls = roomList.map(r => {
+    const el = document.createElement('div');
+    el.className = 'room-label';
+    el.innerHTML = `${r.name}<small>${r.area}</small>`;
+    labelsLayer.appendChild(el);
+    return { el, pos: r.pos };
+  });
+}
+setRoomLabels(ROOMS);
 
 function updateLabels() {
   if (!showLabels) {
@@ -943,9 +950,10 @@ function applyVariant(key) {
   });
 }
 
+let customWallMeshes = [];
 function applyWallHeight() {
   const factor = isCutaway ? (CUTAWAY_WALL_H / FULL_WALL_H) : 1.0;
-  for (const w of wallMeshes) {
+  for (const w of [...wallMeshes, ...customWallMeshes]) {
     const targetH = Math.min(w.userData.baseHeight, FULL_WALL_H * factor);
     const scaleY = targetH / w.userData.baseHeight;
     w.scale.y = scaleY;
@@ -1074,6 +1082,781 @@ window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ============================================================
+// 12. CUSTOM FLOOR PLAN UPLOAD -> DYNAMIC 3D BUILDER
+// ============================================================
+let customAptGroup = null;
+let customBlueprintMesh = null;
+let isCustomMode = false;
+let selectedFile = null;
+let lastUploadedPayload = null;
+
+function imageToResizedBase64(img, maxSide = 1400) {
+  const scale = Math.min(maxSide / img.width, maxSide / img.height, 1);
+  const c = document.createElement('canvas');
+  c.width = Math.round(img.width * scale);
+  c.height = Math.round(img.height * scale);
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, c.width, c.height);
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+  const dataUrl = c.toDataURL('image/jpeg', 0.88);
+  return {
+    dataUrl,
+    mimeType: 'image/jpeg',
+    imageBase64: dataUrl.split(',')[1]
+  };
+}
+
+function addCustomGlass(x1, z1, x2, z2, height, parent) {
+  const dx = x2 - x1;
+  const dz = z2 - z1;
+  const len = Math.hypot(dx, dz);
+  if (len < 0.2) return;
+  const cx = (x1 + x2) / 2;
+  const cz = (z1 + z2) / 2;
+  const glass = new THREE.Mesh(new THREE.BoxGeometry(len, height, 0.04), M.glass);
+  glass.position.set(cx, height / 2, cz);
+  glass.rotation.y = -Math.atan2(dz, dx);
+  parent.add(glass);
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(len, 0.05, 0.06), M.metal);
+  frame.position.set(cx, 0.025, cz);
+  frame.rotation.y = -Math.atan2(dz, dx);
+  parent.add(frame);
+}
+
+function renderAiFurnitureItem(item, parent) {
+  const x = Number(item.x) || 0;
+  const z = Number(item.z) || 0;
+  const w = Math.max(0.3, Number(item.w) || 1.0);
+  const d = Math.max(0.3, Number(item.d) || 0.8);
+  const rot = ((Number(item.rot) || 0) * Math.PI) / 180;
+  const g = new THREE.Group();
+
+  switch (item.type) {
+    case 'sofa': {
+      addBox(w, 0.34, d, 0, 0.18, 0, M.sofa, g);
+      addBox(w, 0.68, Math.min(0.22, d * 0.25), 0, 0.36, -d / 2 + 0.10, M.sofa, g);
+      addBox(0.18, 0.52, d, -w / 2 + 0.09, 0.28, 0, M.sofa, g);
+      addBox(0.18, 0.52, d, w / 2 - 0.09, 0.28, 0, M.sofa, g);
+      addBox(w * 0.26, 0.28, 0.14, -w * 0.24, 0.48, -d / 2 + 0.26, M.cushion, g);
+      addBox(w * 0.26, 0.28, 0.14, w * 0.24, 0.48, -d / 2 + 0.26, M.cushion, g);
+      break;
+    }
+    case 'bed': {
+      addCustomBed(0, 0, w, d, 0, g);
+      break;
+    }
+    case 'dining_table': {
+      addBox(w, 0.06, d, 0, 0.74, 0, M.wood, g);
+      addBox(0.08, 0.72, d * 0.72, -w * 0.36, 0.36, 0, M.woodDark, g);
+      addBox(0.08, 0.72, d * 0.72, w * 0.36, 0.36, 0, M.woodDark, g);
+      [-w * 0.28, w * 0.28].forEach(dx => {
+        addBox(0.40, 0.42, 0.40, dx, 0.22, -d / 2 - 0.24, M.sofa, g);
+        addBox(0.40, 0.42, 0.40, dx, 0.22, d / 2 + 0.24, M.sofa, g);
+      });
+      break;
+    }
+    case 'kitchen_counter': {
+      addBox(w, 0.86, d, 0, 0.43, 0, M.kitchenLower, g);
+      addBox(w + 0.03, 0.05, d + 0.03, 0, 0.885, 0, M.countertop, g);
+      addBox(w * 0.92, 0.76, d * 0.55, 0, 1.80, -d * 0.2, M.kitchenUpper, g);
+      break;
+    }
+    case 'tv_unit': {
+      addBox(w, 0.34, d, 0, 0.34, 0, M.kitchenUpper, g);
+      addBox(w * 0.72, 0.80, 0.05, 0, 1.18, -d * 0.3, M.tvScreen, g);
+      break;
+    }
+    case 'wardrobe': {
+      addBox(w, 2.28, d, 0, 1.14, 0, M.kitchenUpper, g);
+      break;
+    }
+    case 'desk': {
+      addBox(w, 0.05, d, 0, 0.74, 0, M.wood, g);
+      addBox(0.06, 0.72, d * 0.85, -w / 2 + 0.06, 0.36, 0, M.metal, g);
+      addBox(0.06, 0.72, d * 0.85, w / 2 - 0.06, 0.36, 0, M.metal, g);
+      break;
+    }
+    case 'coffee_table': {
+      const r = Math.min(w, d) / 2;
+      const top = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.06, 24), M.countertop);
+      top.position.y = 0.36;
+      top.castShadow = true;
+      g.add(top);
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.45, r * 0.52, 0.33, 18), M.wood);
+      base.position.y = 0.17;
+      g.add(base);
+      break;
+    }
+    case 'vanity': {
+      addBox(w, 0.44, d, 0, 0.64, 0, M.wood, g);
+      addBox(w + 0.02, 0.05, d + 0.02, 0, 0.88, 0, M.countertop, g);
+      const sink = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.14, 0.11, 18), M.ceramic);
+      sink.position.y = 0.94;
+      g.add(sink);
+      break;
+    }
+    case 'toilet': {
+      addBox(0.40, 0.42, 0.56, 0, 0.24, 0, M.ceramic, g);
+      break;
+    }
+    case 'shower': {
+      addBox(w, 0.06, d, 0, 0.03, 0, M.countertop, g);
+      const shGlass = new THREE.Mesh(new THREE.BoxGeometry(w, 2.05, 0.03), M.glass);
+      shGlass.position.set(0, 1.05, d / 2);
+      g.add(shGlass);
+      break;
+    }
+    case 'plant': {
+      addCustomPlant(0, 0, 1.0, g);
+      break;
+    }
+    default: {
+      addBox(w, 0.5, d, 0, 0.25, 0, M.wood, g);
+    }
+  }
+
+  g.position.set(x, 0, z);
+  g.rotation.y = rot;
+  parent.add(g);
+}
+
+function disposeGroup(group) {
+  if (!group) return;
+  group.traverse(obj => {
+    if (obj.geometry) obj.geometry.dispose();
+    if (obj.material && obj.userData.disposeMat) {
+      if (obj.material.map) obj.material.map.dispose();
+      obj.material.dispose();
+    }
+  });
+  scene.remove(group);
+}
+
+function addCustomPlant(x, z, scale, parent) {
+  const g = new THREE.Group();
+  const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.16 * scale, 0.12 * scale, 0.30 * scale, 14), M.pot);
+  pot.position.y = 0.15 * scale;
+  pot.castShadow = true;
+  g.add(pot);
+  const leaf = new THREE.Mesh(new THREE.DodecahedronGeometry(0.24 * scale, 1), M.plant);
+  leaf.position.y = 0.56 * scale;
+  leaf.castShadow = true;
+  g.add(leaf);
+  g.position.set(x, 0, z);
+  parent.add(g);
+}
+
+function addCustomBed(x, z, w, l, rotY, parent) {
+  const g = new THREE.Group();
+  addBox(w, 0.24, l, 0, 0.14, 0, M.wood, g);
+  addBox(w - 0.10, 0.22, l - 0.12, 0, 0.35, 0.02, M.bedLinen, g);
+  addBox(w - 0.06, 0.06, l * 0.4, 0, 0.45, l * 0.22, M.bedThrow, g);
+  addBox(w + 0.18, 0.95, 0.09, 0, 0.50, -l / 2 + 0.02, M.wood, g);
+  addBox(w * 0.72, 0.13, 0.36, 0, 0.50, -l / 2 + 0.30, M.cushion, g);
+  g.position.set(x, 0, z);
+  g.rotation.y = rotY;
+  parent.add(g);
+}
+
+function addCustomWallSeg(x1, z1, x2, z2, thickness, isOuter, parent, heightScale = 1.0) {
+  const dx = x2 - x1;
+  const dz = z2 - z1;
+  const len = Math.hypot(dx, dz);
+  if (len < 0.14) return;
+  const cx = (x1 + x2) / 2;
+  const cz = (z1 + z2) / 2;
+  const h = FULL_WALL_H * heightScale;
+  const geo = new THREE.BoxGeometry(len, h, thickness);
+  const mesh = new THREE.Mesh(geo, isOuter ? M.wallOuter : M.wall);
+  mesh.position.set(cx, h / 2, cz);
+  mesh.rotation.y = -Math.atan2(dz, dx);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.userData.baseHeight = h;
+  parent.add(mesh);
+  customWallMeshes.push(mesh);
+}
+
+/**
+ * Cuts door & window openings out of a straight horizontal or vertical wall segment
+ */
+function buildWallWithOpenings(axis, fixedCoord, start, end, thickness, isOuter, doors, windows, parent) {
+  const cuts = [];
+  const tol = 0.45;
+
+  for (const d of doors) {
+    const dAxis = d.axis || 'x';
+    if (dAxis !== axis) continue;
+    const dFixed = axis === 'x' ? d.z : d.x;
+    const dCenter = axis === 'x' ? d.x : d.z;
+    const halfW = Math.min(1.2, Math.max(0.4, (Number(d.width) || 0.9) / 2));
+    if (Math.abs(dFixed - fixedCoord) < tol && dCenter + halfW > start && dCenter - halfW < end) {
+      cuts.push({ a: Math.max(start, dCenter - halfW), b: Math.min(end, dCenter + halfW), kind: 'door' });
+    }
+  }
+  for (const win of windows) {
+    const wAxis = win.axis || 'x';
+    if (wAxis !== axis) continue;
+    const wFixed = axis === 'x' ? win.z : win.x;
+    const wCenter = axis === 'x' ? win.x : win.z;
+    const halfW = Math.min(2.2, Math.max(0.45, (Number(win.width) || 1.4) / 2));
+    if (Math.abs(wFixed - fixedCoord) < tol && wCenter + halfW > start && wCenter - halfW < end) {
+      cuts.push({ a: Math.max(start, wCenter - halfW), b: Math.min(end, wCenter + halfW), kind: 'window' });
+    }
+  }
+
+  cuts.sort((u, v) => u.a - v.a);
+  let cursor = start;
+  for (const c of cuts) {
+    if (c.a > cursor + 0.12) {
+      if (axis === 'x') addCustomWallSeg(cursor, fixedCoord, c.a, fixedCoord, thickness, isOuter, parent);
+      else addCustomWallSeg(fixedCoord, cursor, fixedCoord, c.a, thickness, isOuter, parent);
+    }
+    if (c.kind === 'window' && c.b > c.a + 0.2) {
+      if (axis === 'x') {
+        addCustomWallSeg(c.a, fixedCoord, c.b, fixedCoord, thickness * 0.85, isOuter, parent, 0.28);
+        addCustomGlass(c.a, fixedCoord, c.b, fixedCoord, 2.25, parent);
+      } else {
+        addCustomWallSeg(fixedCoord, c.a, fixedCoord, c.b, thickness * 0.85, isOuter, parent, 0.28);
+        addCustomGlass(fixedCoord, c.a, fixedCoord, c.b, 2.25, parent);
+      }
+    }
+    cursor = Math.max(cursor, c.b);
+  }
+  if (end > cursor + 0.12) {
+    if (axis === 'x') addCustomWallSeg(cursor, fixedCoord, end, fixedCoord, thickness, isOuter, parent);
+    else addCustomWallSeg(fixedCoord, cursor, fixedCoord, end, thickness, isOuter, parent);
+  }
+}
+
+function furnishCustomRoom(r, hasSeparateKitchen, parent) {
+  const x1 = r.x;
+  const z1 = r.z;
+  const rw = r.w;
+  const rd = r.d;
+  const cx = x1 + rw / 2;
+  const cz = z1 + rd / 2;
+
+  if (r.type === 'bathroom') {
+    // Vanity + vessel sink + toilet + walk-in glass shower
+    const vanW = Math.min(1.0, rw * 0.44);
+    addBox(vanW, 0.44, 0.48, x1 + vanW / 2 + 0.18, 0.64, z1 + 0.34, M.wood, parent);
+    addBox(vanW + 0.04, 0.05, 0.50, x1 + vanW / 2 + 0.18, 0.88, z1 + 0.34, M.countertop, parent);
+    const sink = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.14, 0.11, 18), M.ceramic);
+    sink.position.set(x1 + vanW / 2 + 0.18, 0.94, z1 + 0.34);
+    parent.add(sink);
+
+    // Wall-hung toilet
+    addBox(0.40, 0.42, 0.56, cx, 0.24, z1 + 0.40, M.ceramic, parent);
+
+    // Walk-in glass shower on right side if room wide enough
+    if (rw >= 1.9) {
+      const shW = Math.min(0.95, rw * 0.34);
+      const shD = Math.min(1.45, rd * 0.72);
+      addBox(shW, 0.06, shD, x1 + rw - shW / 2 - 0.12, 0.03, z1 + shD / 2 + 0.14, M.countertop, parent);
+      addCustomGlass(x1 + rw - shW - 0.12, z1 + 0.14, x1 + rw - shW - 0.12, z1 + shD * 0.82, 2.1, parent);
+    }
+    return;
+  }
+
+  if (r.type === 'balcony') {
+    if (rw * rd >= 6.0) {
+      // Outdoor lounge sofa + low table + 2 potted trees
+      const sLen = Math.min(1.85, rw * 0.52);
+      addBox(sLen, 0.34, 0.76, cx, 0.18, z1 + rd - 0.56, M.sofa, parent);
+      addBox(sLen, 0.62, 0.14, cx, 0.40, z1 + rd - 0.22, M.wood, parent);
+      addBox(Math.min(0.85, rw * 0.25), 0.30, 0.50, cx, 0.16, cz - 0.15, M.wood, parent);
+      addCustomPlant(x1 + 0.42, z1 + rd - 0.42, 1.15, parent);
+      addCustomPlant(x1 + rw - 0.42, z1 + rd - 0.42, 0.95, parent);
+    } else {
+      // Bistro table + 2 chairs + plant
+      const t = new THREE.Mesh(new THREE.CylinderGeometry(0.30, 0.30, 0.04, 18), M.wood);
+      t.position.set(cx, 0.70, cz);
+      parent.add(t);
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.70, 8), M.metal);
+      leg.position.set(cx, 0.35, cz);
+      parent.add(leg);
+      if (rw > 1.5) {
+        addBox(0.42, 0.42, 0.42, cx - 0.60, 0.22, cz, M.wood, parent);
+        addBox(0.42, 0.42, 0.42, cx + 0.60, 0.22, cz, M.wood, parent);
+      }
+      addCustomPlant(x1 + rw - 0.35, z1 + 0.38, 0.85, parent);
+    }
+    return;
+  }
+
+  if (r.type === 'kitchen') {
+    const runLen = Math.min(2.8, rd - 0.6);
+    addBox(0.62, 0.86, runLen, x1 + rw - 0.42, 0.43, cz, M.kitchenLower, parent);
+    addBox(0.66, 0.05, runLen + 0.04, x1 + rw - 0.42, 0.885, cz, M.countertop, parent);
+    addBox(0.38, 0.80, runLen * 0.82, x1 + rw - 0.28, 1.82, cz, M.kitchenUpper, parent);
+    addBox(0.42, 0.02, 0.52, x1 + rw - 0.44, 0.915, cz - runLen * 0.22, M.metal, parent);
+    addBox(0.44, 0.02, 0.58, x1 + rw - 0.44, 0.915, cz + runLen * 0.22, M.tvScreen, parent);
+    return;
+  }
+
+  if (r.type === 'living') {
+    const includeKitchen = r.hasKitchen || !hasSeparateKitchen;
+    const livingW = includeKitchen && rw > 3.6 ? rw - 1.35 : rw;
+    const livCx = x1 + livingW / 2;
+    const livCz = z1 + Math.min(rd * 0.44, rd - 1.9);
+
+    // Rug
+    addBox(Math.min(2.4, livingW * 0.66), 0.02, Math.min(2.6, rd * 0.44), livCx, 0.012, livCz, M.rug, parent, false, true);
+
+    // Slatted TV feature wall + console + TV on left wall
+    const slats = 11;
+    const tvZ0 = livCz - 0.75;
+    for (let i = 0; i < slats; i++) {
+      addBox(0.03, 2.15, 0.06, x1 + 0.14, 1.10, tvZ0 + i * 0.15, M.wood, parent);
+    }
+    addBox(0.36, 0.32, 1.9, x1 + 0.32, 0.36, livCz, M.kitchenUpper, parent);
+    addBox(0.05, 0.82, 1.4, x1 + 0.19, 1.22, livCz, M.tvScreen, parent);
+
+    // Modular Sofa facing TV
+    const sofaLen = Math.min(2.4, rd * 0.40);
+    const sofaX = Math.min(x1 + livingW - 0.62, livCx + 0.72);
+    addBox(0.92, 0.34, sofaLen, sofaX, 0.19, livCz, M.sofa, parent);
+    addBox(0.20, 0.70, sofaLen, sofaX + 0.36, 0.38, livCz, M.sofa, parent);
+    addBox(0.92, 0.54, 0.18, sofaX, 0.29, livCz - sofaLen / 2 + 0.09, M.sofa, parent);
+    addBox(0.92, 0.54, 0.18, sofaX, 0.29, livCz + sofaLen / 2 - 0.09, M.sofa, parent);
+    addBox(0.15, 0.32, 0.42, sofaX + 0.18, 0.50, livCz - sofaLen * 0.25, M.cushion, parent);
+    addBox(0.15, 0.32, 0.42, sofaX + 0.18, 0.50, livCz + sofaLen * 0.25, M.cushion, parent);
+
+    // Round Coffee Table
+    const ct = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.44, 0.06, 24), M.countertop);
+    ct.position.set(livCx - 0.12, 0.36, livCz);
+    ct.castShadow = true;
+    parent.add(ct);
+    const ctBase = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.21, 0.33, 18), M.wood);
+    ctBase.position.set(livCx - 0.12, 0.17, livCz);
+    parent.add(ctBase);
+
+    // Dining Table + 6 Chairs near bottom of living room
+    if (rd >= 4.2) {
+      const dinZ = z1 + rd - 0.95;
+      const tW = Math.min(1.75, livingW * 0.52);
+      addBox(tW, 0.06, 0.88, livCx, 0.74, dinZ, M.wood, parent);
+      addBox(0.08, 0.72, 0.68, livCx - tW * 0.36, 0.36, dinZ, M.woodDark, parent);
+      addBox(0.08, 0.72, 0.68, livCx + tW * 0.36, 0.36, dinZ, M.woodDark, parent);
+      [-tW * 0.30, 0, tW * 0.30].forEach(dx => {
+        addBox(0.40, 0.44, 0.40, livCx + dx, 0.23, dinZ - 0.58, M.sofa, parent);
+        addBox(0.40, 0.44, 0.40, livCx + dx, 0.23, dinZ + 0.58, M.sofa, parent);
+      });
+    }
+
+    // Open-plan Kitchen run along right wall
+    if (includeKitchen) {
+      const kLen = Math.min(3.1, rd * 0.56);
+      const kCz = z1 + rd - kLen / 2 - 0.35;
+      addBox(0.62, 0.86, kLen, x1 + rw - 0.40, 0.43, kCz, M.kitchenLower, parent);
+      addBox(0.66, 0.05, kLen + 0.04, x1 + rw - 0.40, 0.885, kCz, M.countertop, parent);
+      addBox(0.38, 0.82, kLen * 0.78, x1 + rw - 0.26, 1.84, kCz + 0.15, M.kitchenUpper, parent);
+      addBox(0.64, 2.22, 0.66, x1 + rw - 0.40, 1.11, kCz - kLen / 2 + 0.34, M.kitchenUpper, parent);
+      addBox(0.42, 0.02, 0.54, x1 + rw - 0.42, 0.915, kCz, M.metal, parent);
+      addBox(0.44, 0.02, 0.58, x1 + rw - 0.42, 0.915, kCz + kLen * 0.28, M.tvScreen, parent);
+    }
+
+    addCustomPlant(x1 + 0.44, z1 + rd - 0.45, 1.15, parent);
+    return;
+  }
+
+  if (r.type === 'bedroom') {
+    const area = rw * rd;
+    const isDouble = area >= 10.5 && Math.min(rw, rd) >= 2.4;
+    const bw = isDouble ? Math.min(1.75, Math.min(rw, rd) * 0.62) : Math.min(1.05, Math.min(rw, rd) * 0.52);
+    const bl = Math.min(2.05, Math.max(rw, rd) * 0.52);
+
+    // Orient bed cleanly against left/top wall
+    const horiz = rw >= rd;
+    const rot = horiz ? Math.PI / 2 : 0;
+    const bedX = horiz ? x1 + bl / 2 + 0.22 : cx;
+    const bedZ = horiz ? cz : z1 + bl / 2 + 0.25;
+
+    // Plush rug
+    addBox(Math.min(rw - 0.5, (horiz ? bl : bw) + 0.7), 0.02, Math.min(rd - 0.5, (horiz ? bw : bl) + 0.7), bedX, 0.012, bedZ, M.rug, parent, false, true);
+    addCustomBed(bedX, bedZ, bw, bl, rot, parent);
+
+    // Nightstands + glowing lamps
+    if (horiz && rd >= bw + 1.0) {
+      addBox(0.42, 0.44, 0.42, x1 + 0.38, 0.22, bedZ - bw / 2 - 0.30, M.wood, parent);
+      addBox(0.42, 0.44, 0.42, x1 + 0.38, 0.22, bedZ + bw / 2 + 0.30, M.wood, parent);
+      const lamp1 = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.14, 0.20, 14), M.lampGlow);
+      lamp1.position.set(x1 + 0.38, 0.58, bedZ - bw / 2 - 0.30);
+      parent.add(lamp1);
+      const lamp2 = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.14, 0.20, 14), M.lampGlow);
+      lamp2.position.set(x1 + 0.38, 0.58, bedZ + bw / 2 + 0.30);
+      parent.add(lamp2);
+    } else if (!horiz && rw >= bw + 0.95) {
+      addBox(0.42, 0.44, 0.42, bedX - bw / 2 - 0.28, 0.22, z1 + 0.38, M.wood, parent);
+      addBox(0.42, 0.44, 0.42, bedX + bw / 2 + 0.28, 0.22, z1 + 0.38, M.wood, parent);
+    }
+
+    // Built-in floor-to-ceiling wardrobe along free wall
+    if (rd >= 3.4) {
+      addBox(0.58, 2.28, Math.min(1.85, rd * 0.35), x1 + rw - 0.42, 1.14, z1 + 1.15, M.kitchenUpper, parent);
+    } else if (rw >= 3.4) {
+      addBox(Math.min(1.85, rw * 0.38), 2.28, 0.58, x1 + rw - 1.15, 1.14, z1 + 0.42, M.kitchenUpper, parent);
+    }
+
+    addCustomPlant(x1 + rw - 0.42, z1 + rd - 0.42, 0.95, parent);
+    return;
+  }
+
+  // Hall / Entry
+  if (rw >= 1.6 && rd >= 1.4) {
+    addBox(Math.min(1.3, rw * 0.55), 2.25, 0.52, cx, 1.125, z1 + 0.38, M.kitchenUpper, parent);
+  }
+}
+
+function buildCustomApartment(parsed, fileName) {
+  disposeGroup(customAptGroup);
+  customWallMeshes = [];
+  customBlueprintMesh = null;
+
+  customAptGroup = new THREE.Group();
+  scene.add(customAptGroup);
+
+  // Normalize rooms safely
+  const rooms = (parsed.rooms || [])
+    .map(r => ({
+      name: r.name || 'Комната',
+      type: r.type || 'bedroom',
+      x: Number(r.x) || 0,
+      z: Number(r.z) || 0,
+      w: Math.max(0.8, Number(r.w) || 2.5),
+      d: Math.max(0.8, Number(r.d) || 2.5),
+      area: Number(r.area) || 0,
+      hasKitchen: Boolean(r.hasKitchen)
+    }));
+
+  // Compute exact bounding box of all rooms
+  let minX = Infinity, minZ = Infinity, maxX = -Infinity, maxZ = -Infinity;
+  for (const r of rooms) {
+    if (r.x < minX) minX = r.x;
+    if (r.z < minZ) minZ = r.z;
+    if (r.x + r.w > maxX) maxX = r.x + r.w;
+    if (r.z + r.d > maxZ) maxZ = r.z + r.d;
+  }
+  if (!isFinite(minX)) { minX = 0; minZ = 0; maxX = parsed.width || 12; maxZ = parsed.depth || 9; }
+  const W = maxX - minX;
+  const D = maxZ - minZ;
+
+  // Shift rooms so top-left is (0, 0)
+  for (const r of rooms) {
+    r.x -= minX;
+    r.z -= minZ;
+  }
+  const doors = (parsed.doors || []).map(d => ({ ...d, x: (Number(d.x) || 0) - minX, z: (Number(d.z) || 0) - minZ }));
+  const windows = (parsed.windows || []).map(w => ({ ...w, x: (Number(w.x) || 0) - minX, z: (Number(w.z) || 0) - minZ }));
+
+  // Semi-transparent blueprint underlay (toggleable)
+  if (parsed.blueprintDataUrl) {
+    const bpTex = new THREE.TextureLoader().load(parsed.blueprintDataUrl);
+    bpTex.colorSpace = THREE.SRGBColorSpace;
+    const bpMat = new THREE.MeshBasicMaterial({
+      map: bpTex,
+      transparent: true,
+      opacity: 0.45,
+      depthWrite: false
+    });
+    customBlueprintMesh = new THREE.Mesh(new THREE.PlaneGeometry(W, D), bpMat);
+    customBlueprintMesh.rotation.x = -Math.PI / 2;
+    customBlueprintMesh.position.set(W / 2, 0.02, D / 2);
+    customBlueprintMesh.userData.disposeMat = true;
+    customBlueprintMesh.visible = false;
+    customAptGroup.add(customBlueprintMesh);
+  }
+
+  // Helper: find which room owns a sample point (px, pz)
+  const roomAt = (px, pz, ignoreIdx = -1) => {
+    for (let i = 0; i < rooms.length; i++) {
+      if (i === ignoreIdx) continue;
+      const r = rooms[i];
+      if (px >= r.x - 0.08 && px <= r.x + r.w + 0.08 && pz >= r.z - 0.08 && pz <= r.z + r.d + 0.08) {
+        return r;
+      }
+    }
+    return null;
+  };
+
+  const hasSeparateKitchen = rooms.some(r => r.type === 'kitchen');
+  const dynamicLabels = [];
+  const builtEdges = new Set();
+
+  // Build exact room slabs, floors, perimeter/shared walls with doors/windows, AND rich furniture!
+  rooms.forEach((r, idx) => {
+    const cx = r.x + r.w / 2;
+    const cz = r.z + r.d / 2;
+
+    // Exact room base slab (hugs room shape — no giant empty rectangle!)
+    addBox(r.w + 0.16, 0.14, r.d + 0.16, cx, -0.11, cz, M.wallOuter, customAptGroup, false, true);
+
+    // Room floor finish
+    const floorMat =
+      (r.type === 'bathroom' || r.type === 'kitchen') ? M.floorTile :
+      (r.type === 'balcony') ? M.floorDeck : M.floorWood;
+    const floorY = r.type === 'balcony' ? -0.05 : -0.03;
+    const floorMesh = new THREE.Mesh(new THREE.BoxGeometry(r.w, 0.06, r.d), floorMat);
+    floorMesh.position.set(cx, floorY, cz);
+    floorMesh.receiveShadow = true;
+    customAptGroup.add(floorMesh);
+
+    // Label
+    const areaTxt = r.area ? `${r.area} м²` : `~${Math.round(r.w * r.d * 10) / 10} м²`;
+    dynamicLabels.push({ name: r.name, area: areaTxt, pos: new THREE.Vector3(cx, 1.25, cz) });
+
+    // Check all 4 edges of this room (subdivide into ~0.6m checks to detect adjacent rooms cleanly)
+    const edges = [
+      { axis: 'x', fixed: r.z, start: r.x, end: r.x + r.w, nx: 0, nz: -0.25 },
+      { axis: 'x', fixed: r.z + r.d, start: r.x, end: r.x + r.w, nx: 0, nz: 0.25 },
+      { axis: 'z', fixed: r.x, start: r.z, end: r.z + r.d, nx: -0.25, nz: 0 },
+      { axis: 'z', fixed: r.x + r.w, start: r.z, end: r.z + r.d, nx: 0.25, nz: 0 }
+    ];
+
+    for (const e of edges) {
+      const key = `${e.axis}:${Math.round(e.fixed * 4)}:${Math.round(e.start * 4)}:${Math.round(e.end * 4)}`;
+      if (builtEdges.has(key)) continue;
+      builtEdges.add(key);
+
+      const mid = (e.start + e.end) / 2;
+      const sampleX = (e.axis === 'x' ? mid : e.fixed) + e.nx;
+      const sampleZ = (e.axis === 'x' ? e.fixed : mid) + e.nz;
+      const neighbor = roomAt(sampleX, sampleZ, idx);
+
+      if (r.type === 'balcony') {
+        if (!neighbor) {
+          // Outer balcony edge -> frameless glass railing
+          if (e.axis === 'x') addCustomGlass(e.start, e.fixed, e.end, e.fixed, 1.05, customAptGroup);
+          else addCustomGlass(e.fixed, e.start, e.fixed, e.end, 1.05, customAptGroup);
+        } else {
+          // Indoor <-> Balcony edge -> floor-to-ceiling sliding glass wall
+          if (e.axis === 'x') addCustomGlass(e.start, e.fixed, e.end, e.fixed, 2.30, customAptGroup);
+          else addCustomGlass(e.fixed, e.start, e.fixed, e.end, 2.30, customAptGroup);
+        }
+      } else if (neighbor && neighbor.type === 'balcony') {
+        // Indoor <-> Balcony -> glass sliding doors
+        if (e.axis === 'x') addCustomGlass(e.start, e.fixed, e.end, e.fixed, 2.30, customAptGroup);
+        else addCustomGlass(e.fixed, e.start, e.fixed, e.end, 2.30, customAptGroup);
+      } else if (neighbor && ((r.type === 'living' && neighbor.type === 'hall') || (r.type === 'hall' && neighbor.type === 'living'))) {
+        // Open-plan connection between living & entry hall -> keep open!
+      } else {
+        const isOuter = !neighbor;
+        const thick = isOuter ? 0.22 : 0.12;
+        buildWallWithOpenings(e.axis, e.fixed, e.start, e.end, thick, isOuter, doors, windows, customAptGroup);
+      }
+    }
+
+    // Furnish room with Photo-1-grade detail!
+    furnishCustomRoom(r, hasSeparateKitchen, customAptGroup);
+  });
+
+  // Toggle visibility & UI
+  isCustomMode = true;
+  aptGroup.visible = false;
+  customAptGroup.visible = true;
+  applyWallHeight();
+  setRoomLabels(dynamicLabels);
+
+  document.getElementById('project-title').textContent = fileName.replace(/\.[^.]+$/, '');
+  document.getElementById('project-subtitle').textContent =
+    `🤖 Gemini AI • ${parsed.totalArea} м² • ${rooms.length} комн.`;
+  document.getElementById('btn-reset-plan').classList.remove('hidden');
+  document.getElementById('btn-ai-render').classList.remove('hidden');
+  const bpBtn = document.getElementById('btn-blueprint');
+  bpBtn.classList.remove('hidden');
+  bpBtn.classList.remove('active');
+
+  // Fly camera cleanly to center of uploaded apartment
+  const maxSpan = Math.max(W, D, 8);
+  camAnim = {
+    startPos: camera.position.clone(),
+    endPos: new THREE.Vector3(W / 2 + maxSpan * 0.78, maxSpan * 0.92, D / 2 + maxSpan * 0.92),
+    startTarget: controls.target.clone(),
+    endTarget: new THREE.Vector3(W / 2, 0.5, D / 2),
+    t: 0
+  };
+}
+
+function resetToDefaultApartment() {
+  isCustomMode = false;
+  if (customAptGroup) customAptGroup.visible = false;
+  aptGroup.visible = true;
+  setRoomLabels(ROOMS);
+  document.getElementById('project-title').textContent = 'Проект ремонта и мебели';
+  document.getElementById('project-subtitle').textContent = '106.8 м² • 3 спальни • 2 санузла • 2 балкона';
+  document.getElementById('btn-reset-plan').classList.add('hidden');
+  document.getElementById('btn-ai-render').classList.add('hidden');
+  document.getElementById('btn-blueprint').classList.add('hidden');
+  flyTo('iso');
+}
+
+// Upload Modal Wiring
+const uploadModal = document.getElementById('upload-modal');
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('plan-file-input');
+const dropEmpty = document.getElementById('dropzone-empty');
+const dropPreview = document.getElementById('dropzone-preview');
+const previewImg = document.getElementById('preview-img');
+const previewName = document.getElementById('preview-name');
+const btnGen3d = document.getElementById('btn-generate-3d');
+const uploadForm = document.getElementById('upload-form');
+const uploadProc = document.getElementById('upload-processing');
+const procBar = document.getElementById('proc-bar');
+const procTitle = document.getElementById('proc-title');
+const inputArea = document.getElementById('input-area');
+
+inputArea.addEventListener('input', () => {
+  document.getElementById('area-val').textContent = `${inputArea.value} м²`;
+});
+
+function handleSelectedFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  selectedFile = file;
+  const reader = new FileReader();
+  reader.onload = () => {
+    previewImg.src = reader.result;
+    previewName.textContent = file.name;
+    dropEmpty.classList.add('hidden');
+    dropPreview.classList.remove('hidden');
+    btnGen3d.disabled = false;
+  };
+  reader.readAsDataURL(file);
+}
+
+document.getElementById('btn-upload').addEventListener('click', () => {
+  uploadForm.classList.remove('hidden');
+  uploadProc.classList.add('hidden');
+  uploadModal.classList.remove('hidden');
+});
+document.getElementById('upload-close').addEventListener('click', () => {
+  uploadModal.classList.add('hidden');
+});
+uploadModal.querySelector('.modal-backdrop').addEventListener('click', () => {
+  if (uploadProc.classList.contains('hidden')) uploadModal.classList.add('hidden');
+});
+
+dropzone.addEventListener('click', e => {
+  if (e.target.id !== 'btn-change-file') fileInput.click();
+});
+document.getElementById('btn-change-file').addEventListener('click', e => {
+  e.stopPropagation();
+  fileInput.click();
+});
+fileInput.addEventListener('change', () => {
+  if (fileInput.files?.[0]) handleSelectedFile(fileInput.files[0]);
+});
+dropzone.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropzone.classList.add('dragover');
+});
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropzone.classList.remove('dragover');
+  if (e.dataTransfer.files?.[0]) handleSelectedFile(e.dataTransfer.files[0]);
+});
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+btnGen3d.addEventListener('click', async () => {
+  if (!selectedFile) return;
+  uploadForm.classList.add('hidden');
+  uploadProc.classList.remove('hidden');
+
+  const steps = Array.from(document.querySelectorAll('#proc-steps li'));
+  steps.forEach(s => s.classList.remove('active', 'done'));
+
+  const setStep = (idx, pct, title) => {
+    procBar.style.width = `${pct}%`;
+    procTitle.textContent = title;
+    steps.forEach((s, i) => {
+      s.classList.toggle('done', i < idx);
+      s.classList.toggle('active', i === idx);
+    });
+  };
+
+  try {
+    setStep(0, 18, 'Подготавливаем чертёж для Gemini AI...');
+    const { img } = await loadImageFile(selectedFile);
+    const resized = imageToResizedBase64(img, 1400);
+    lastUploadedPayload = {
+      imageBase64: resized.imageBase64,
+      mimeType: resized.mimeType,
+      blueprintDataUrl: resized.dataUrl
+    };
+
+    setStep(1, 45, 'Gemini AI анализирует стены, окна и двери...');
+    const apiRes = await fetch('/api/analyze-plan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        imageBase64: resized.imageBase64,
+        mimeType: resized.mimeType,
+        targetAreaM2: Number(inputArea.value)
+      })
+    });
+
+    const data = await apiRes.json();
+    if (!apiRes.ok) {
+      throw new Error(data.message || data.error || 'Ошибка Gemini API');
+    }
+
+    setStep(2, 80, 'Строим комнаты, проёмы и расставляем мебель...');
+    data.blueprintDataUrl = resized.dataUrl;
+    await sleep(300);
+
+    setStep(3, 100, 'Собираем готовую 3D-модель...');
+    buildCustomApartment(data, selectedFile.name);
+    await sleep(350);
+
+    steps.forEach(s => { s.classList.remove('active'); s.classList.add('done'); });
+    uploadModal.classList.add('hidden');
+  } catch (err) {
+    alert(`Ошибка Gemini AI: ${err.message}\n\nПроверьте, что ключ GEMINI_API_KEY добавлен в файл .env (локально) или в Environment Variables на Vercel.`);
+    uploadForm.classList.remove('hidden');
+    uploadProc.classList.add('hidden');
+  }
+});
+
+// AI Photorealistic 3D Render for uploaded floor plan in active style
+const btnAiRender = document.getElementById('btn-ai-render');
+btnAiRender.addEventListener('click', async () => {
+  if (!lastUploadedPayload) return;
+  const origHtml = btnAiRender.innerHTML;
+  btnAiRender.disabled = true;
+  btnAiRender.innerHTML = '<span>⏳</span> Gemini рендерит...';
+  try {
+    const res = await fetch('/api/render-plan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        imageBase64: lastUploadedPayload.imageBase64,
+        mimeType: lastUploadedPayload.mimeType,
+        styleKey: currentVariantKey
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || data.error || 'Ошибка рендера');
+    lightboxImg.src = data.imageDataUrl;
+    lightbox.classList.remove('hidden');
+  } catch (err) {
+    alert(`Не удалось сгенерировать AI-рендер: ${err.message}`);
+  } finally {
+    btnAiRender.disabled = false;
+    btnAiRender.innerHTML = origHtml;
+  }
+});
+
+document.getElementById('btn-reset-plan').addEventListener('click', resetToDefaultApartment);
+document.getElementById('btn-blueprint').addEventListener('click', e => {
+  if (!customBlueprintMesh) return;
+  customBlueprintMesh.visible = !customBlueprintMesh.visible;
+  e.currentTarget.classList.toggle('active', customBlueprintMesh.visible);
 });
 
 // Initialize

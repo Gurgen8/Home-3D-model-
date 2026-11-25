@@ -145,10 +145,10 @@ button {
 /* Side Panel */
 .side-panel {
   position: fixed;
-  top: 84px;
+  top: 96px;
   left: 16px;
-  width: 280px;
-  max-height: calc(100vh - 168px);
+  width: 272px;
+  max-height: calc(100vh - 180px);
   overflow-y: auto;
   z-index: 10;
   border-radius: 16px;
@@ -426,6 +426,228 @@ button {
 
 .btn-apply:hover {
   background: var(--accent);
+}
+
+.hidden {
+  display: none !important;
+}
+
+.btn-upload {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: #2f2a25;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(42, 34, 24, 0.22);
+}
+
+.btn-upload:hover {
+  transform: translateY(-1px);
+  background: #433c35;
+}
+
+/* Upload Modal */
+.upload-modal-content {
+  width: min(680px, 94vw);
+}
+
+.dropzone {
+  border: 2px dashed rgba(143, 107, 73, 0.45);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.65);
+  padding: 26px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dropzone:hover,
+.dropzone.dragover {
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.dropzone-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.dropzone-icon {
+  font-size: 36px;
+}
+
+.dropzone-empty strong {
+  font-size: 14.5px;
+}
+
+.dropzone-empty span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.dropzone-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.dropzone-preview img {
+  max-height: 220px;
+  max-width: 100%;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  object-fit: contain;
+  background: #fff;
+}
+
+.preview-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.upload-settings {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--glass-border);
+}
+
+.setting-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12.5px;
+}
+
+.setting-field input[type="range"] {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.upload-footer {
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.upload-note {
+  font-size: 12px;
+  color: var(--muted);
+  flex: 1;
+  min-width: 220px;
+}
+
+.btn-lg {
+  padding: 11px 20px;
+  font-size: 14px;
+}
+
+.btn-lg:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Processing Loader */
+.upload-processing {
+  padding: 28px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.spinner-ring {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(143, 107, 73, 0.2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.progress-track {
+  width: 100%;
+  max-width: 420px;
+  height: 8px;
+  background: rgba(143, 107, 73, 0.16);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #a67c52, #6f4e32);
+  border-radius: 999px;
+  transition: width 0.35s ease;
+}
+
+.proc-steps {
+  list-style: none;
+  text-align: left;
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.proc-steps li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  opacity: 0.45;
+  transition: all 0.25s ease;
+}
+
+.proc-steps li::before {
+  content: '○';
+  font-weight: 700;
+}
+
+.proc-steps li.active {
+  opacity: 1;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.proc-steps li.active::before {
+  content: '◉';
+  color: var(--accent);
+}
+
+.proc-steps li.done {
+  opacity: 0.95;
+  color: #3d6b48;
+}
+
+.proc-steps li.done::before {
+  content: '✓';
+  color: #3d6b48;
 }
 
 /* Lightbox */

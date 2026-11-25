@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>3D Дизайн Квартиры — 106.8 м² | 7 стилей ремонта и мебели</title>
-  <link rel="stylesheet" href="styles.css?v=2" />
+  <link rel="stylesheet" href="styles.css?v=4" />
   <script type="importmap">
     {
       "imports": {
@@ -24,11 +24,23 @@
     <div class="brand">
       <div class="brand-badge">3D</div>
       <div>
-        <h1>Проект ремонта и мебели</h1>
-        <p class="subtitle">106.8 м² • 3 спальни • 2 санузла • 2 балкона</p>
+        <h1 id="project-title">Проект ремонта и мебели</h1>
+        <p class="subtitle" id="project-subtitle">106.8 м² • 3 спальни • 2 санузла • 2 балкона</p>
       </div>
     </div>
     <div class="top-actions">
+      <button id="btn-upload" class="btn-upload" title="Загрузить свой план в PNG/JPG и создать 3D">
+        <span>📤</span> Загрузить свой план
+      </button>
+      <button id="btn-reset-plan" class="btn-icon hidden" title="Вернуться к исходной квартире 106.8 м²">
+        <span>↩</span> Исходный план
+      </button>
+      <button id="btn-ai-render" class="btn-accent hidden" title="Сгенерировать фотореалистичный 3D-рендер загруженного плана в текущем стиле через Gemini">
+        <span>🤖</span> AI-рендер моего плана
+      </button>
+      <button id="btn-blueprint" class="btn-icon hidden" title="Показать/скрыть исходный чертёж на полу">
+        <span>🗺️</span> Чертёж
+      </button>
       <button id="btn-renders" class="btn-accent" title="Открыть фотореалистичные 3D рендеры">
         <span>✨</span> Фотореалистичные рендеры
       </button>
@@ -273,13 +285,79 @@
     </div>
   </div>
 
+  <!-- Upload Floor Plan Modal -->
+  <div id="upload-modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content upload-modal-content glass">
+      <div class="modal-header">
+        <div>
+          <h2>Создать 3D-макет по вашему плану</h2>
+          <p class="subtitle">Загрузите планировку (PNG, JPG, WEBP) — система распознает стены, комнаты и расставит мебель в 3D</p>
+        </div>
+        <button id="upload-close" class="btn-icon">✕ Закрыть</button>
+      </div>
+
+      <!-- Step 1: Dropzone & Settings -->
+      <div id="upload-form">
+        <div id="dropzone" class="dropzone">
+          <input type="file" id="plan-file-input" accept="image/png,image/jpeg,image/webp,image/*" hidden />
+          <div id="dropzone-empty" class="dropzone-empty">
+            <div class="dropzone-icon">📐</div>
+            <strong>Перетащите картинку плана сюда или нажмите для выбора</strong>
+            <span>Поддерживаются PNG, JPG, JPEG, WEBP (желательно чёткий 2D-чертёж на светлом фоне)</span>
+          </div>
+          <div id="dropzone-preview" class="dropzone-preview hidden">
+            <img id="preview-img" src="" alt="Предпросмотр плана" />
+            <div class="preview-meta">
+              <strong id="preview-name">plan.png</strong>
+              <button type="button" id="btn-change-file" class="btn-icon">Выбрать другой файл</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="upload-settings">
+          <label class="setting-field">
+            <span>Примерная площадь квартиры: <strong id="area-val">100 м²</strong></span>
+            <input type="range" id="input-area" min="35" max="240" step="5" value="100" />
+          </label>
+          <div class="setting-field">
+            <span>Движок распознавания:</span>
+            <strong style="color:#7a5837">🤖 Gemini AI-архитектор (.env)</strong>
+          </div>
+        </div>
+
+        <div class="upload-footer">
+          <p class="upload-note">Gemini сам распознает стены, двери, окна, комнаты и мебель. После этого будут доступны все <strong>7 стилей</strong> и кнопка <strong>«🤖 AI-рендер»</strong>.</p>
+          <button id="btn-generate-3d" class="btn-accent btn-lg" disabled>
+            <span>🚀</span> Создать 3D через Gemini AI
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 2: Animated Processing Loader -->
+      <div id="upload-processing" class="upload-processing hidden">
+        <div class="spinner-ring"></div>
+        <h3 id="proc-title">Анализируем ваш чертёж...</h3>
+        <div class="progress-track">
+          <div class="progress-bar" id="proc-bar"></div>
+        </div>
+        <ul class="proc-steps" id="proc-steps">
+          <li data-step="0">Загрузка и обрезка чертежа</li>
+          <li data-step="1">Распознавание стен и перегородок</li>
+          <li data-step="2">Определение комнат и площадей</li>
+          <li data-step="3">Расстановка мебели и генерация 3D-сцены</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <!-- Lightbox for full-size render -->
   <div id="lightbox" class="lightbox hidden">
     <img id="lightbox-img" src="" alt="Full view" />
     <button id="lightbox-close" class="btn-icon">✕</button>
   </div>
 
-  <script type="module" src="app.js?v=3"></script>
+  <script type="module" src="app.js?v=6"></script>
 </body>
 
 </html>
