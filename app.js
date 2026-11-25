@@ -638,20 +638,25 @@ function addPlant(x, z, scale = 1.0) {
     g.add(leaf);
   });
   g.position.set(x, 0, z);
+  g.userData.category = 'plant';
   aptGroup.add(g);
 }
 
 function addLamp(x, y, z, scale = 1) {
+  const g = new THREE.Group();
   const base = new THREE.Mesh(new THREE.CylinderGeometry(0.06 * scale, 0.09 * scale, 0.24 * scale, 12), M.metal);
   base.position.set(x, y + 0.12 * scale, z);
-  aptGroup.add(base);
+  g.add(base);
   const shade = new THREE.Mesh(new THREE.CylinderGeometry(0.10 * scale, 0.15 * scale, 0.18 * scale, 16), M.lampGlow);
   shade.position.set(x, y + 0.28 * scale, z);
-  aptGroup.add(shade);
+  g.add(shade);
+  g.userData.category = 'lamp';
+  aptGroup.add(g);
 }
 
 function addBed(x, z, w, l, rotY = 0) {
   const g = new THREE.Group();
+  g.userData.category = 'bed';
   // Platform frame
   addBox(w, 0.24, l, 0, 0.14, 0, M.wood, g);
   // Mattress
@@ -683,18 +688,22 @@ addBox(1.55, 2.35, 0.58, 3.85, 1.175, 0.60, M.kitchenUpper);
 addBox(0.85, 0.44, 0.40, 4.95, 0.22, 0.52, M.wood);
 
 // Slatted TV Feature Wall on left partition (clear of Master Bedroom door at Z=2.20–3.10)
+const tvWallG = new THREE.Group();
+tvWallG.userData.category = 'tv_wall';
 for (let i = 0; i < 15; i++) {
-  addBox(0.03, 2.25, 0.06, 3.09, 1.15, 3.30 + i * 0.14, M.wood);
+  addBox(0.03, 2.25, 0.06, 3.09, 1.15, 3.30 + i * 0.14, M.wood, tvWallG);
 }
 // Floating TV Console + TV
-addBox(0.38, 0.32, 2.10, 3.26, 0.38, 4.28, M.kitchenUpper);
-addBox(0.05, 0.85, 1.50, 3.13, 1.25, 4.28, M.tvScreen);
+addBox(0.38, 0.32, 2.10, 3.26, 0.38, 4.28, M.kitchenUpper, tvWallG);
+addBox(0.05, 0.85, 1.50, 3.13, 1.25, 4.28, M.tvScreen, tvWallG);
+aptGroup.add(tvWallG);
 
 // Living Area Rug
 addBox(2.35, 0.02, 2.85, 4.65, 0.01, 3.75, M.rug, aptGroup, false, true);
 
 // Modular Sofa facing TV (left)
 const sofaG = new THREE.Group();
+sofaG.userData.category = 'sofa';
 addBox(0.95, 0.34, 2.55, 0, 0.19, 0, M.sofa, sofaG);          // Seat base
 addBox(0.22, 0.72, 2.55, 0.38, 0.38, 0, M.sofa, sofaG);       // Backrest
 addBox(0.95, 0.56, 0.20, 0, 0.30, -1.20, M.sofa, sofaG);      // Left arm
@@ -1247,11 +1256,13 @@ function addCustomPlant(x, z, scale, parent) {
   leaf.castShadow = true;
   g.add(leaf);
   g.position.set(x, 0, z);
+  g.userData.category = 'plant';
   parent.add(g);
 }
 
 function addCustomBed(x, z, w, l, rotY, parent) {
   const g = new THREE.Group();
+  g.userData.category = 'bed';
   addBox(w, 0.24, l, 0, 0.14, 0, M.wood, g);
   addBox(w - 0.10, 0.22, l - 0.12, 0, 0.35, 0.02, M.bedLinen, g);
   addBox(w - 0.06, 0.06, l * 0.4, 0, 0.45, l * 0.22, M.bedThrow, g);
@@ -1857,6 +1868,297 @@ document.getElementById('btn-blueprint').addEventListener('click', e => {
   if (!customBlueprintMesh) return;
   customBlueprintMesh.visible = !customBlueprintMesh.visible;
   e.currentTarget.classList.toggle('active', customBlueprintMesh.visible);
+});
+
+let lastCustomRooms = [];
+function getActiveRoomsForAI() {
+  if (isCustomMode && lastCustomRooms.length) return lastCustomRooms;
+  return [
+    { name: 'Гостиная + Кухня', type: 'living', x: 3.05, z: 0.25, w: 5.1, d: 6.4, cx: 5.3, cz: 4.3 },
+    { name: 'Мастер-спальня', type: 'bedroom', x: 0.25, z: 2.1, w: 2.7, d: 7.1, cx: 1.6, cz: 4.9 },
+    { name: 'Спальня 3', type: 'bedroom', x: 10.75, z: 0.65, w: 2.7, d: 5.5, cx: 12.1, cz: 3.6 },
+    { name: 'Спальня 2', type: 'bedroom', x: 8.25, z: 3.15, w: 2.4, d: 4.4, cx: 9.45, cz: 5.4 },
+    { name: 'Большой балкон', type: 'balcony', x: 3.05, z: 6.65, w: 3.8, d: 2.55, cx: 4.95, cz: 8.0 },
+    { name: 'Санузел 1', type: 'bathroom', x: 0.25, z: 0.25, w: 2.7, d: 1.8, cx: 1.6, cz: 1.15 },
+    { name: 'Санузел 2', type: 'bathroom', x: 7.85, z: 0.25, w: 2.8, d: 1.5, cx: 9.2, cz: 1.0 },
+    { name: 'Балкон 2', type: 'balcony', x: 10.75, z: 6.15, w: 2.7, d: 1.4, cx: 12.1, cz: 6.9 }
+  ];
+}
+
+// Store custom rooms for AI chat context
+const origBuildCustomApt = buildCustomApartment;
+buildCustomApartment = function(parsed, fileName) {
+  origBuildCustomApt(parsed, fileName);
+  lastCustomRooms = (parsed.rooms || []).map(r => {
+    const x = Number(r.x) || 0;
+    const z = Number(r.z) || 0;
+    const w = Math.max(0.8, Number(r.w) || 2.5);
+    const d = Math.max(0.8, Number(r.d) || 2.5);
+    return { name: r.name, type: r.type, x, z, w, d, cx: x + w / 2, cz: z + d / 2 };
+  });
+};
+
+// ============================================================
+// 13. GEMINI AI CHAT WIDGET -> LIVE 3D SCENE MANIPULATION
+// ============================================================
+const aiObjectsGroup = new THREE.Group();
+scene.add(aiObjectsGroup);
+let aiAddedItems = [];
+let aiItemSeq = 1;
+const chatHistory = [];
+
+function spawnChatItem(action) {
+  const itemType = action.itemType || 'plant';
+  const x = Number(action.x) || 5.0;
+  const z = Number(action.z) || 4.0;
+  const customMat = action.color
+    ? new THREE.MeshStandardMaterial({ color: action.color, roughness: 0.72 })
+    : null;
+
+  const g = new THREE.Group();
+  const id = `item-${aiItemSeq++}`;
+
+  switch (itemType) {
+    case 'plant': {
+      addCustomPlant(0, 0, 1.25, g);
+      break;
+    }
+    case 'armchair': {
+      const m = customMat || M.sofa;
+      addBox(0.82, 0.36, 0.80, 0, 0.20, 0, m, g);
+      addBox(0.82, 0.68, 0.18, 0, 0.42, -0.32, m, g);
+      addBox(0.14, 0.50, 0.80, -0.35, 0.30, 0, m, g);
+      addBox(0.14, 0.50, 0.80, 0.35, 0.30, 0, m, g);
+      break;
+    }
+    case 'sofa': {
+      const m = customMat || M.sofa;
+      addBox(2.0, 0.34, 0.90, 0, 0.19, 0, m, g);
+      addBox(2.0, 0.70, 0.20, 0, 0.38, -0.36, m, g);
+      addBox(0.18, 0.54, 0.90, -0.92, 0.30, 0, m, g);
+      addBox(0.18, 0.54, 0.90, 0.92, 0.30, 0, m, g);
+      break;
+    }
+    case 'desk': {
+      const m = customMat || M.wood;
+      addBox(1.35, 0.05, 0.65, 0, 0.74, 0, m, g);
+      addBox(0.06, 0.72, 0.58, -0.60, 0.36, 0, M.metal, g);
+      addBox(0.06, 0.72, 0.58, 0.60, 0.36, 0, M.metal, g);
+      break;
+    }
+    case 'bed': {
+      addCustomBed(0, 0, 1.60, 2.00, 0, g);
+      break;
+    }
+    case 'lamp': {
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, 1.55, 10), M.metal);
+      pole.position.y = 0.78;
+      g.add(pole);
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.20, 0.04, 18), M.metal);
+      base.position.y = 0.02;
+      g.add(base);
+      const shade = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.24, 0.28, 18), M.lampGlow);
+      shade.position.y = 1.58;
+      g.add(shade);
+      break;
+    }
+    case 'coffee_table': {
+      const top = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.06, 24), customMat || M.countertop);
+      top.position.y = 0.38;
+      top.castShadow = true;
+      g.add(top);
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.35, 18), M.wood);
+      leg.position.y = 0.18;
+      g.add(leg);
+      break;
+    }
+    case 'wardrobe': {
+      addBox(1.50, 2.25, 0.58, 0, 1.125, 0, customMat || M.kitchenUpper, g);
+      break;
+    }
+    case 'dining_table': {
+      addBox(1.65, 0.06, 0.88, 0, 0.74, 0, customMat || M.wood, g);
+      addBox(0.08, 0.72, 0.68, -0.62, 0.36, 0, M.woodDark, g);
+      addBox(0.08, 0.72, 0.68, 0.62, 0.36, 0, M.woodDark, g);
+      break;
+    }
+    case 'rug': {
+      addBox(2.2, 0.02, 1.6, 0, 0.015, 0, customMat || M.rug, g, false, true);
+      break;
+    }
+    default: {
+      addCustomPlant(0, 0, 1.1, g);
+    }
+  }
+
+  g.position.set(x, 0, z);
+  aiObjectsGroup.add(g);
+  aiAddedItems.push({ id, itemType, room: action.room || '', x, z, mesh: g });
+}
+
+function setCategoryVisibilityInScene(category, visible) {
+  const groups = [aptGroup, customAptGroup].filter(Boolean);
+  for (const root of groups) {
+    root.traverse(obj => {
+      if (obj.userData?.category === category) {
+        obj.visible = visible;
+      } else if (category === 'rug' && obj.material === M.rug) {
+        obj.visible = visible;
+      } else if (category === 'tv_wall' && obj.material === M.tvScreen) {
+        obj.visible = visible;
+      }
+    });
+  }
+}
+
+function removeChatItem(target) {
+  if (target === 'last') {
+    const last = aiAddedItems.pop();
+    if (last) aiObjectsGroup.remove(last.mesh);
+    return;
+  }
+  if (target === 'all_added') {
+    for (const it of aiAddedItems) aiObjectsGroup.remove(it.mesh);
+    aiAddedItems = [];
+    return;
+  }
+
+  // Normalize aliases (e.g. "plants" -> "plant", "flowers" -> "plant", "beds" -> "bed")
+  const norm = String(target || '').toLowerCase().replace(/s$/, '');
+  const cat = norm === 'flower' ? 'plant' : norm;
+
+  // 1. Remove ALL matching AI-added items
+  aiAddedItems = aiAddedItems.filter(it => {
+    if (it.itemType === cat || it.id === target) {
+      aiObjectsGroup.remove(it.mesh);
+      return false;
+    }
+    return true;
+  });
+
+  // 2. Also hide ALL matching existing items in the 3D apartment!
+  setCategoryVisibilityInScene(cat, false);
+}
+
+function executeChatActions(actions) {
+  if (!Array.isArray(actions)) return;
+  for (const a of actions) {
+    if (!a || !a.type) continue;
+    switch (a.type) {
+      case 'set_style':
+        if (VARIANTS[a.variant]) applyVariant(a.variant);
+        break;
+      case 'set_color':
+        if (M[a.target] && a.hex) {
+          M[a.target].color.set(a.hex);
+          M[a.target].needsUpdate = true;
+        }
+        break;
+      case 'set_lighting':
+        isNight = a.mode === 'night';
+        applyLighting();
+        break;
+      case 'set_walls':
+        isCutaway = Boolean(a.cutaway);
+        applyWallHeight();
+        break;
+      case 'set_labels':
+        showLabels = Boolean(a.visible);
+        document.getElementById('btn-labels').classList.toggle('active', showLabels);
+        break;
+      case 'set_camera':
+        if (CAM_PRESETS[a.preset]) flyTo(a.preset);
+        break;
+      case 'add_item':
+        spawnChatItem(a);
+        break;
+      case 'remove_item':
+        removeChatItem(a.target);
+        break;
+      case 'show_item':
+        setCategoryVisibilityInScene(String(a.target || '').toLowerCase().replace(/s$/, ''), true);
+        break;
+      case 'restore_default_furniture':
+        ['plant', 'bed', 'lamp', 'sofa', 'tv_wall', 'rug'].forEach(c => setCategoryVisibilityInScene(c, true));
+        applyVariant(currentVariantKey);
+        break;
+    }
+  }
+}
+
+// Chat UI Events
+const chatFab = document.getElementById('chat-fab');
+const chatDrawer = document.getElementById('chat-drawer');
+const chatMessages = document.getElementById('chat-messages');
+const chatForm = document.getElementById('chat-form');
+const chatInput = document.getElementById('chat-input');
+const chatSend = document.getElementById('chat-send');
+
+chatFab.addEventListener('click', () => {
+  chatDrawer.classList.toggle('hidden');
+  if (!chatDrawer.classList.contains('hidden')) chatInput.focus();
+});
+document.getElementById('chat-close').addEventListener('click', () => {
+  chatDrawer.classList.add('hidden');
+});
+
+function appendChatBubble(role, text, extraClass = '') {
+  const div = document.createElement('div');
+  div.className = `chat-msg ${role} ${extraClass}`.trim();
+  div.textContent = text;
+  chatMessages.appendChild(div);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  return div;
+}
+
+async function sendChatMessage(text) {
+  const msg = text.trim();
+  if (!msg) return;
+  appendChatBubble('user', msg);
+  chatInput.value = '';
+  chatSend.disabled = true;
+  const loader = appendChatBubble('assistant', 'Gemini думает и меняет 3D-сцену...', 'loading');
+
+  try {
+    const sceneState = {
+      activeVariant: currentVariantKey,
+      isNight,
+      isCutaway,
+      isCustomMode,
+      rooms: getActiveRoomsForAI(),
+      addedItems: aiAddedItems.map(({ id, itemType, room, x, z }) => ({ id, itemType, room, x, z }))
+    };
+
+    const res = await fetch('/api/chat-architect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg, history: chatHistory, sceneState })
+    });
+    const data = await res.json();
+    loader.remove();
+
+    if (!res.ok) throw new Error(data.message || data.error || 'Ошибка чата');
+
+    executeChatActions(data.actions);
+    appendChatBubble('assistant', data.reply || 'Готово!');
+    chatHistory.push({ role: 'user', text: msg }, { role: 'assistant', text: data.reply || 'Готово!' });
+  } catch (err) {
+    loader.remove();
+    appendChatBubble('assistant', `Ошибка: ${err.message}`);
+  } finally {
+    chatSend.disabled = false;
+    chatInput.focus();
+  }
+}
+
+chatForm.addEventListener('submit', e => {
+  e.preventDefault();
+  sendChatMessage(chatInput.value);
+});
+
+document.getElementById('chat-chips').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-prompt]');
+  if (btn) sendChatMessage(btn.dataset.prompt);
 });
 
 // Initialize

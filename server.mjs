@@ -9,6 +9,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import analyzePlanHandler from './api/analyze-plan.js';
 import renderPlanHandler from './api/render-plan.js';
+import chatArchitectHandler from './api/chat-architect.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 8766;
@@ -64,7 +65,7 @@ const server = http.createServer(async (req, res) => {
   // Reload .env on API calls so editing .env works without restarting server!
   const urlPath = (req.url || '/').split('?')[0];
 
-  if (urlPath === '/api/analyze-plan' || urlPath === '/api/render-plan') {
+  if (urlPath === '/api/analyze-plan' || urlPath === '/api/render-plan' || urlPath === '/api/chat-architect') {
     loadEnv();
     try {
       req.body = await readJsonBody(req);
@@ -76,6 +77,7 @@ const server = http.createServer(async (req, res) => {
     }
     if (urlPath === '/api/analyze-plan') return analyzePlanHandler(req, res);
     if (urlPath === '/api/render-plan') return renderPlanHandler(req, res);
+    if (urlPath === '/api/chat-architect') return chatArchitectHandler(req, res);
   }
 
   // Static files

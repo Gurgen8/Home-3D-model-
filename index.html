@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>3D Дизайн Квартиры — 106.8 м² | 7 стилей ремонта и мебели</title>
-  <link rel="stylesheet" href="styles.css?v=4" />
+  <link rel="stylesheet" href="styles.css?v=5" />
   <script type="importmap">
     {
       "imports": {
@@ -351,13 +351,53 @@
     </div>
   </div>
 
+  <!-- Floating Gemini AI Chat Button & Panel -->
+  <button id="chat-fab" class="chat-fab" title="Открыть чат с Gemini AI-дизайнером">
+    <svg width="26" height="26" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+      <path d="M14 2C14.8 9.2 18.8 13.2 26 14C18.8 14.8 14.8 18.8 14 26C13.2 18.8 9.2 14.8 2 14C9.2 13.2 13.2 9.2 14 2Z" fill="white"/>
+    </svg>
+    <span class="chat-fab-label">AI Чат</span>
+  </button>
+
+  <aside id="chat-drawer" class="chat-drawer glass hidden">
+    <div class="chat-header">
+      <div class="chat-title-row">
+        <span class="gemini-dot">✦</span>
+        <div>
+          <strong>Gemini AI-Дизайнер</strong>
+          <small>Управляет 3D-макетом в реальном времени</small>
+        </div>
+      </div>
+      <button id="chat-close" class="btn-icon">✕</button>
+    </div>
+
+    <div id="chat-messages" class="chat-messages">
+      <div class="chat-msg assistant">
+        Привет! Я вижу всю планировку и могу менять 3D-макет прямо сейчас. Напиши, например: <em>«покрась диван в синий»</em>, <em>«добавь большое растение в гостиную»</em>, <em>«включи стиль лофт и вечерний свет»</em> или <em>«удали последнее»</em>.
+      </div>
+    </div>
+
+    <div class="chat-chips" id="chat-chips">
+      <button type="button" data-prompt="Включи стиль лофт и вечерний свет">🌙 Лофт + вечер</button>
+      <button type="button" data-prompt="Покрась диван в глубокий изумрудный цвет">🛋️ Изумрудный диван</button>
+      <button type="button" data-prompt="Добавь большое растение в гостиную">🌿 + Растение</button>
+      <button type="button" data-prompt="Добавь кресло в мастер-спальню">🪑 + Кресло</button>
+      <button type="button" data-prompt="Удали последний добавленный элемент">🗑️ Удали последнее</button>
+    </div>
+
+    <form id="chat-form" class="chat-form">
+      <input type="text" id="chat-input" placeholder="Напишите команду для 3D-плана..." autocomplete="off" />
+      <button type="submit" id="chat-send" class="btn-accent">➤</button>
+    </form>
+  </aside>
+
   <!-- Lightbox for full-size render -->
   <div id="lightbox" class="lightbox hidden">
     <img id="lightbox-img" src="" alt="Full view" />
     <button id="lightbox-close" class="btn-icon">✕</button>
   </div>
 
-  <script type="module" src="app.js?v=6"></script>
+  <script type="module" src="app.js?v=8"></script>
 </body>
 
 </html>
